@@ -22,19 +22,19 @@
 2. **Prompt管理**：支持用户上传prompt和系统自动生成prompt，方便用户参与测试。
 3. **盲选测试**：系统为每个问题随机生成A/B答案，用户通过投票选择更优答案，每轮测试包含3个或奇数个问题。
 4. **数据分析**：利用AI分析测试结果，提供深度洞察和优化建议，生成prompt使用趋势报告。
-5. **技术实现**：采用Vue 3 + TypeScript + Vite + Tailwind CSS前端技术栈，Python + FastAPI + AI模型集成后端技术栈，使用结构化文件存储。
+5. **技术实现**：采用Vue 2  + Vite + Tailwind CSS前端技术栈，Python + FastAPI + AI模型集成后端技术栈，使用结构化文件存储。
 
 ## 技术方案
 
 1. **前端技术**：
-   - 框架：Vue 3 + TypeScript + Vite
+   - 框架：Vue 2 + Vite + NodeJS 12.22
    - CSS框架：Tailwind CSS
    - 状态管理：Pinia
    - 路由：Vue Router
    - HTTP客户端：Axios
 
 2. **后端技术**：
-   - 语言：Python 3.8+
+   - 语言：Python 3.6
    - Web框架：FastAPI
    - 认证：JWT
    - AI模型集成：用于prompt生成和测试结果分析
