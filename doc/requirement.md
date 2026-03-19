@@ -140,6 +140,13 @@ Prompt盲选测试平台是一个基于LMArena设计理念的在线平台，通�
 | 测试结果   | id, session\_id, prompt1\_id, prompt2\_id, winner\_id, question, created\_at | 测试结果信息       |
 | 投票     | id, user\_id, test\_result\_id, vote, created\_at                  | 用户投票信息       |
 
+### 5.4 核心流程
+
+1. **用户登录流程**：访问首页 → 点击登录 → 填写凭证 → 验证 → 进入个人中心
+2. **任务管理流程**：登录 → 创建测试任务 → 上传prompt → 上传测试案例 → 提交保存任务
+3. **盲选测试流程**：登录 → 选择测试任务 → 逐题测试投票 → 展示结果和分析
+4. **Prompt生成流程**：登录 → 进入一键生成 → 提问生成prompt
+
 ## 6. 部署方案
 
 ### 6.1 环境要求
