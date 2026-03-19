@@ -105,9 +105,18 @@ Prompt盲选测试平台是一个基于LMArena设计理念的在线平台，通�
 
 ### 5.1 技术栈
 
-- **前端**：Vue 3 + TypeScript + Vite + Tailwind CSS
-- **后端**：Python + FastAPI + AI模型集成
-- **存储**：结构化文件存储（JSON格式）
+- **前端**：
+  - 框架：Vue 3 + TypeScript + Vite
+  - CSS框架：Tailwind CSS
+  - 状态管理：Pinia
+  - 路由：Vue Router
+  - HTTP客户端：Axios
+- **后端**：
+  - 语言：Python 3.8+
+  - Web框架：FastAPI
+  - 认证：JWT
+  - AI模型集成：用于prompt生成和测试结果分析
+  - 存储：结构化文件存储（JSON格式）
 - **部署**：本地服务器或云服务（非容器化）
 
 ### 5.2 架构设计
@@ -126,6 +135,12 @@ Prompt盲选测试平台是一个基于LMArena设计理念的在线平台，通�
 | 测试会话   | id, user\_id, created\_at, completed\_at                           | 测试会话信息       |
 | 测试结果   | id, session\_id, prompt1\_id, prompt2\_id, winner\_id, created\_at | 测试结果信息       |
 | 投票     | id, user\_id, test\_result\_id, vote, created\_at                  | 用户投票信息       |
+
+### 5.4 核心流程
+
+1. **用户登录流程**：访问首页 → 点击登录 → 填写凭证 → 验证 → 进入个人中心
+2. **盲选测试流程**：登录 → 选择测试任务 → 系统生成测试轮次 → 逐题测试投票 → 展示结果和分析
+3. **Prompt管理流程**：登录 → 进入个人中心 → 上传或一键生成prompt
 
 ## 6. 部署方案
 
