@@ -33,13 +33,18 @@
               <div class="original-question" style="margin: 16px 0; padding: 12px; background: #f8fafc; border-radius: 12px;">
                 <div style="font-weight: 700; margin-bottom: 8px;">问题：{{ question.originalQuestion || '无输入' }}</div>
               </div>
+              
+              <div v-if="question.testData" class="test-data" style="margin: 16px 0; padding: 12px; background: #f0f9ff; border-radius: 12px;">
+                <div style="font-weight: 700; margin-bottom: 8px;">测试数据：</div>
+                <div style="line-height: 1.6; color: #334155;">{{ question.testData }}</div>
+              </div>
 
               <div class="answers" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
-                <div class="answer-card" :class="{ 'selected': question.selectedAnswer === 'A' }" style="padding: 16px; border: 1px solid var(--line); border-radius: 12px; max-height: 150px; display: flex; flex-direction: column;">
+                <div class="answer-card" :class="{ 'selected': question.selectedAnswer === 'A' }" style="padding: 16px; border: 2px solid var(--line); border-radius: 12px; max-height: 150px; display: flex; flex-direction: column; transition: all 0.3s ease;">
                   <div style="font-weight: 700; margin-bottom: 8px;">候选回答 A：</div>
                   <div style="line-height: 1.6; color: #334155; max-height: 100px; overflow-y: auto; flex: 1;">{{ question.answerA }}</div>
                 </div>
-                <div class="answer-card" :class="{ 'selected': question.selectedAnswer === 'B' }" style="padding: 16px; border: 1px solid var(--line); border-radius: 12px; max-height: 150px; display: flex; flex-direction: column;">
+                <div class="answer-card" :class="{ 'selected': question.selectedAnswer === 'B' }" style="padding: 16px; border: 2px solid var(--line); border-radius: 12px; max-height: 150px; display: flex; flex-direction: column; transition: all 0.3s ease;">
                   <div style="font-weight: 700; margin-bottom: 8px;">候选回答 B：</div>
                   <div style="line-height: 1.6; color: #334155; max-height: 100px; overflow-y: auto; flex: 1;">{{ question.answerB }}</div>
                 </div>
@@ -104,6 +109,7 @@ export default {
         return {
           id: q.id,
           originalQuestion: session.userInputs ? session.userInputs[q.id] : '',
+          testData: q.testData || (session.testDataByQuestion ? session.testDataByQuestion[q.id] : ''),
           answerA: q.answerA,
           answerB: q.answerB,
           selectedAnswer: answer ? (answer.selectedPrompt === 'prompt_a' ? 'A' : 'B') : null,
@@ -119,4 +125,17 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.answer-card.selected {
+  border-color: #10b981 !important;
+  background-color: #f0fdf4 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+}
+
+.answer-card.selected .answer-title {
+  color: #059669 !important;
+  font-weight: 800 !important;
+}
+</style>
 

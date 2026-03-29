@@ -48,6 +48,7 @@
           :selected-answer="selectedAnswer"
           :save-hint-text="saveHintText"
           :task-name="currentSession ? testerTasks.find(t => t.id === currentSession.taskId).name : '' "
+          :task="currentSession ? testerTasks.find(t => t.id === currentSession.taskId) : null"
           @select-answer="selectAnswer"
           @prev-question="prevQuestion"
           @next-question="nextQuestion"
@@ -116,6 +117,7 @@
           :selected-answer="selectedAnswer"
           :save-hint-text="saveHintText"
           :task-name="currentSession ? adminTasks.find(t => t.id === currentSession.taskId).name : '' "
+          :task="currentSession ? adminTasks.find(t => t.id === currentSession.taskId) : null"
           @select-answer="selectAnswer"
           @prev-question="prevQuestion"
           @next-question="nextQuestion"
@@ -548,6 +550,13 @@ export default {
               console.log('Model judge answers:', modelJudgeAnswers)
             }
             
+            // 获取测试数据
+            let testDataByQuestion = {}
+            if (this.$refs.testSession) {
+              testDataByQuestion = this.$refs.testSession.testDataByQuestion
+              console.log('Test data by question:', testDataByQuestion)
+            }
+            
             // 构建完整的会话信息，包括用户输入、候选回答、选择结果和大模型裁判结果
             const sessionWithDetails = {
               id: this.currentSession.id,
@@ -555,9 +564,11 @@ export default {
               answeredCount: validAnswers.length,
               answers: validAnswers,
               userInputs: validUserInputs,
+              testDataByQuestion: testDataByQuestion,
               questions: validQuestions.map(q => ({
                 ...q,
-                modelJudge: modelJudgeAnswers[q.id] || null
+                modelJudge: modelJudgeAnswers[q.id] || null,
+                testData: testDataByQuestion[q.id] || ''
               })),
               endTime: new Date()
             }

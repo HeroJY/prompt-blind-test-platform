@@ -22,6 +22,13 @@
 
       <div class="card pad">
         <div class="source-wrap">
+          <div class="eyebrow">测试数据</div>
+          <textarea v-model="currentTestData" placeholder="输入测试数据..." :disabled="inputDisabled" style="width: 100%; min-height: 80px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 14px; resize: vertical;"></textarea>
+        </div>
+      </div>
+
+      <div class="card pad">
+        <div class="source-wrap">
           <div class="eyebrow">原始问题</div>
           <textarea v-model="userInput" placeholder="请输入您的问题..." :disabled="inputDisabled" style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 14px; resize: vertical;"></textarea>
           <div style="margin-top: 12px; display: flex; justify-content: center;">
@@ -131,11 +138,17 @@ export default {
     taskName: {
       type: String,
       default: ''
+    },
+    task: {
+      type: Object,
+      default: null
     }
   },
   data() {
     return {
       userInputs: {},
+      testData: '',
+      testDataByQuestion: {},
       showAnswers: false,
       generateButtonDisabled: false,
       inputDisabled: false,
@@ -184,6 +197,17 @@ export default {
     currentJudgeAnswer() {
       if (!this.currentQuestion) return null
       return this.modelJudgeAnswers[this.currentQuestion.id]
+    },
+    currentTestData: {
+      get() {
+        if (!this.currentQuestion) return ''
+        return this.testDataByQuestion[this.currentQuestion.id] || ''
+      },
+      set(value) {
+        if (this.currentQuestion) {
+          this.$set(this.testDataByQuestion, this.currentQuestion.id, value)
+        }
+      }
     }
   },
   watch: {
@@ -212,6 +236,24 @@ export default {
           this.inputDisabled = false
         }
       }
+    },
+    task: {
+      handler(newTask) {
+        if (newTask) {
+          this.testData = newTask.testData || ''
+          // 初始化 testDataByQuestion，使用任务级别的测试数据作为默认值
+          this.testDataByQuestion = {}
+          if (this.currentSession && this.currentSession.questions) {
+            this.currentSession.questions.forEach(question => {
+              this.testDataByQuestion[question.id] = newTask.testData || ''
+            })
+          }
+        } else {
+          this.testData = ''
+          this.testDataByQuestion = {}
+        }
+      },
+      immediate: true
     }
   },
   methods: {

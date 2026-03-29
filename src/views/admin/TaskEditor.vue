@@ -61,6 +61,19 @@
             <label>任务说明</label>
             <textarea v-model="editorForm.description" id="editorDescription"></textarea>
           </div>
+        </div>
+      </div>
+
+      <!-- 提示词导入模块 -->
+      <div class="card pad" style="margin-top: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+          <div style="font-weight: 600;">提示词导入</div>
+          <div class="btn-row">
+            <button class="btn secondary" @click="triggerFileUpload">上传提示词</button>
+            <input type="file" ref="fileInput" style="display: none" @change="handleFileUpload" />
+          </div>
+        </div>
+        <div class="field-grid">
           <div class="grid-2">
             <div>
               <label>Prompt A</label>
@@ -70,6 +83,26 @@
               <label>Prompt B</label>
               <textarea v-model="editorForm.promptB" id="editorPromptB"></textarea>
             </div>
+          </div>
+        </div>
+        <div style="margin-top: 12px; color: #000; font-size: 14px; line-height: 1.8; background-color: #fff3cd; padding: 8px 12px; border-radius: 4px; border-left: 3px solid #ffc107; font-weight: 500;">
+          提示：在开始盲选测试之后，两份提示词会随机出现，不一定Prompt A对应的答案出现在左侧
+        </div>
+      </div>
+
+      <!-- 测试数据导入模块 -->
+      <div class="card pad" style="margin-top: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+          <div style="font-weight: 600;">测试数据导入</div>
+          <div class="btn-row">
+            <button class="btn secondary" @click="triggerDataUpload">上传数据</button>
+            <input type="file" ref="dataInput" style="display: none" @change="handleDataUpload" />
+          </div>
+        </div>
+        <div class="field-grid">
+          <div>
+            <label>测试数据</label>
+            <textarea v-model="testData" id="testData" placeholder="输入测试数据，或点击上方按钮上传数据文件"></textarea>
           </div>
         </div>
       </div>
@@ -181,7 +214,8 @@ export default {
         code: '',
         sortOrder: 99,
         sourceText: ''
-      }
+      },
+      testData: ''
     }
   },
   watch: {
@@ -248,6 +282,29 @@ export default {
         sortOrder: this.selectedTask ? this.selectedTask.items.length + 1 : 1,
         sourceText: ''
       };
+    },
+    triggerFileUpload() {
+      this.$refs.fileInput.click();
+    },
+    handleFileUpload() {
+      // 模拟文件上传功能，不做实际解析
+      alert('提示词文件已上传并自动解析');
+      // 填充示例内容到 prompt a 和 prompt b
+      this.editorForm.promptA = '这是 Prompt A 的示例内容，用于测试盲选功能。请根据用户的问题生成合适的回答。';
+      this.editorForm.promptB = '这是 Prompt B 的示例内容，用于测试盲选功能。请根据用户的问题生成详细、准确的回答。';
+      // 清空文件输入
+      this.$refs.fileInput.value = '';
+    },
+    triggerDataUpload() {
+      this.$refs.dataInput.click();
+    },
+    handleDataUpload() {
+      // 模拟文件上传功能，不做实际解析
+      alert('测试数据文件已上传并自动解析');
+      // 填充示例内容到测试数据
+      this.testData = '这是测试数据的示例内容，包含了多个测试用例。上传数据后，内容会显示在这里。';
+      // 清空文件输入
+      this.$refs.dataInput.value = '';
     }
   }
 }
