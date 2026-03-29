@@ -16,13 +16,13 @@
 
     <div class="nav-group" id="testerNavGroup" v-if="currentUser.role === 'tester'">
       <div class="nav-title">测试用户</div>
-      <button class="nav-item" :class="{ active: currentView === 'tester-tasks' }" @click="$emit('change-view', 'tester-tasks')">Prompt盲选测试</button>
+      <button class="nav-item" :class="{ active: currentView === 'tester-tasks' || currentView === 'tester-import' }" @click="$emit('change-view', 'tester-tasks')">Prompt盲选测试</button>
     </div>
 
     <div class="nav-group" id="adminNavGroup" v-if="currentUser.role === 'admin'">
       <div class="nav-title">管理员</div>
       <button class="nav-item" :class="{ active: currentView === 'admin-generate' }" @click="$emit('change-view', 'admin-generate')">Prompt一键生成</button>
-      <button class="nav-item" :class="{ active: currentView === 'admin-test' }" @click="$emit('change-view', 'admin-test')">Prompt盲选测试</button>
+      <button class="nav-item" :class="{ active: currentView === 'admin-test' || currentView === 'admin-import' }" @click="$emit('change-view', 'admin-test')">Prompt盲选测试</button>
       <button class="nav-item" :class="{ active: currentView === 'admin-tasks' }" @click="$emit('change-view', 'admin-tasks')">广场任务管理</button>
       <button class="nav-item" :class="{ active: currentView === 'admin-editor' }" @click="$emit('change-view', 'admin-editor')">广场任务配置</button>
       <button class="nav-item" :class="{ active: currentView === 'admin-stats' }" @click="$emit('change-view', 'admin-stats')">广场任务统计结果</button>

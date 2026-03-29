@@ -5,7 +5,10 @@
         <h1 class="section-title">Prompt盲选测试</h1>
         <p class="section-subtitle">选择一个任务开始盲测。你可以随时退出，已选择内容会立即保存并计入统计。</p>
       </div>
-      <div class="status-pill"><span class="status-dot"></span> 模拟在线 · 无后端接口</div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button class="btn primary" @click="$emit('create-import-task')">导入任务</button>
+        <div class="status-pill"><span class="status-dot"></span> 模拟在线 · 无后端接口</div>
+      </div>
     </div>
     <div class="task-list" id="testerTaskList">
       <div v-for="task in tasks" :key="task.id" class="card task-card">
@@ -18,14 +21,14 @@
           <div class="meta-row">
             <span class="meta-chip">单轮数量: {{ task.questionLimit || task.items.length }}</span>
             <span class="meta-chip">测试次数: {{ taskTestCounts[task.id] || 0 }}</span>
-            <span class="meta-chip">模式: {{ task.mode === 'single' ? '单题模式' : '自定义模式' }}</span>
           </div>
         </div>
-        <div class="right-actions" style="flex-direction: row; min-width: 400px;">
+        <div class="right-actions" style="flex-direction: row; min-width: 480px;">
           <button class="btn primary" @click="$emit('view-task-detail', task.id)">查看详情</button>
           <button class="btn success" @click="$emit('start-task', task.id)">开始测试</button>
           <button class="btn secondary" @click="$emit('view-history', task.id)">历史操作</button>
           <button class="btn info" @click="showTaskStats(task)">统计</button>
+          <button class="btn danger" @click="$emit('delete-task', task.id)">删除</button>
         </div>
       </div>
     </div>
@@ -76,6 +79,8 @@
         </div>
       </div>
     </div>
+
+
   </section>
 </template>
 
@@ -133,7 +138,8 @@ export default {
         counts[task.id] = this.historyOperations.filter(op => op.taskId === task.id).length;
       });
       return counts;
-    }
+    },
+
   },
   methods: {
     showTaskStats(task) {
@@ -194,7 +200,8 @@ export default {
     closeStatsModal() {
       this.showStatsModal = false
       this.currentTaskStats = null
-    }
+    },
+
   }
 }
 </script>
@@ -344,6 +351,8 @@ export default {
   background-color: #db2777;
 }
 
+
+
 /* 响应式调整 */
 @media (max-width: 768px) {
   .stats-grid {
@@ -352,6 +361,17 @@ export default {
   
   .modal-content {
     width: 95%;
+  }
+  
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .topbar > div:last-child {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 </style>

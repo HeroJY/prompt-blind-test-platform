@@ -22,6 +22,17 @@
           @view-task-detail="viewTaskDetail"
           @start-task="startTask"
           @view-history="viewHistory"
+          @create-import-task="createImportTask"
+          @delete-task="deleteTask"
+        />
+        
+        <ImportTaskEditor v-if="(currentUser.role === 'tester' && currentView === 'tester-import') || (currentUser.role === 'admin' && currentView === 'admin-import')" 
+          :selected-task="selectedTask"
+          @add-item="addItem"
+          @mock-import="mockImport"
+          @delete-item="deleteItem"
+          @back="backFromImport"
+          @save="saveImportTask"
         />
         
         <TaskDetail v-if="currentUser.role === 'tester' && currentView === 'tester-task-detail'" 
@@ -37,7 +48,6 @@
           :selected-answer="selectedAnswer"
           :save-hint-text="saveHintText"
           :task-name="currentSession ? testerTasks.find(t => t.id === currentSession.taskId).name : '' "
-          :task-mode="currentSession ? currentSession.taskMode : 'custom' "
           @select-answer="selectAnswer"
           @prev-question="prevQuestion"
           @next-question="nextQuestion"
@@ -69,6 +79,7 @@
           @add-item="addItem"
           @mock-import="mockImport"
           @delete-item="deleteItem"
+          @back-to-task-management="backToTaskManagement"
         />
         
         <Stats v-if="currentUser.role === 'admin' && currentView === 'admin-stats'" 
@@ -86,7 +97,11 @@
           @view-task-detail="viewTaskDetail"
           @start-task="startTask"
           @view-history="viewHistory"
+          @create-import-task="createImportTask"
+          @delete-task="deleteTask"
         />
+        
+
         
         <TaskDetail v-if="currentUser.role === 'admin' && currentView === 'admin-task-detail'" 
           :selected-task="selectedTask"
@@ -101,7 +116,6 @@
           :selected-answer="selectedAnswer"
           :save-hint-text="saveHintText"
           :task-name="currentSession ? adminTasks.find(t => t.id === currentSession.taskId).name : '' "
-          :task-mode="currentSession ? currentSession.taskMode : 'custom' "
           @select-answer="selectAnswer"
           @prev-question="prevQuestion"
           @next-question="nextQuestion"
@@ -134,6 +148,7 @@ import TaskManagement from './views/admin/TaskManagement.vue'
 import TaskEditor from './views/admin/TaskEditor.vue'
 import Stats from './views/admin/Stats.vue'
 import PromptGenerate from './views/admin/PromptGenerate.vue'
+import ImportTaskEditor from './views/tester/ImportTaskEditor.vue'
 
 export default {
   name: 'App',
@@ -147,7 +162,8 @@ export default {
     TaskManagement,
     TaskEditor,
     Stats,
-    PromptGenerate
+    PromptGenerate,
+    ImportTaskEditor
   },
   data() {
     return {
@@ -174,7 +190,6 @@ export default {
           promptA: '这里是假的提示词1。',
           promptB: '请使用假的提示词2，用高情商生成回复：先共情，再给回答。',
           status: 'published',
-          mode: 'single',
           questionLimit: 3,
           createdBy: 'admin01',
           items: [
@@ -204,7 +219,6 @@ export default {
           promptA: '请对输入的客户信息进行综合风险分析，再按用户提问生成结构化回答。',
           promptB: '请把输入的客户信息整合成要点，用更口语化的表达回答用户，并尽可能减少遗漏。',
           status: 'published',
-          mode: 'custom',
           questionLimit: 2,
           createdBy: 'admin01',
           items: [
@@ -222,7 +236,6 @@ export default {
           promptA: '你是一名资深客服专家，请输出安抚式回复，先表达理解，再说明平台规则，最后给出可执行的补偿建议，整体语气温和、稳定、清晰。',
           promptB: '请作为高情商客服生成回复：先共情，再说明价格变动或流程机制，最后给出一到两种明确处理路径，并强调继续协助。',
           status: 'unpublished',
-          mode: 'custom',
           questionLimit: 3,
           createdBy: 'admin01',
           items: [
@@ -252,7 +265,6 @@ export default {
           promptA: '请对多张图片进行综合理解，先总结关键信息，再按用户提问生成结构化回答。',
           promptB: '请把多图信息整合成要点，用更口语化的表达回答用户，并尽可能减少遗漏。',
           status: 'unpublished',
-          mode: 'custom',
           questionLimit: 2,
           createdBy: 'admin01',
           items: [
@@ -270,7 +282,6 @@ export default {
           promptA: '你是一名资深客服专家，请输出安抚式回复，先表达理解，再说明平台规则，最后给出可执行的补偿建议，整体语气温和、稳定、清晰。',
           promptB: '请作为高情商客服生成回复：先共情，再说明价格变动或流程机制，最后给出一到两种明确处理路径，并强调继续协助。',
           status: 'unpublished',
-          mode: 'custom',
           questionLimit: 3,
           createdBy: 'admin01',
           items: [
@@ -291,7 +302,6 @@ export default {
           promptA: '请对多张图片进行综合理解，先总结关键信息，再按用户提问生成结构化回答。',
           promptB: '请把多图信息整合成要点，用更口语化的表达回答用户，并尽可能减少遗漏。',
           status: 'unpublished',
-          mode: 'single',
           questionLimit: 2,
           createdBy: 'admin01',
           items: [
@@ -419,14 +429,38 @@ export default {
       const task = taskArray.find(t => t.id === taskId)
       if (!task) return
       
-      // 使用任务中指定数量的题目
-      const selectedItems = task.items.slice(0, task.questionLimit || task.items.length)
+      // 创建49个问题的槽位
+      const maxQuestions = 49
+      const importedItems = task.items || []
+      const allQuestions = []
+      
+      // 前N个是导入的问题
+      for (let i = 0; i < importedItems.length && i < maxQuestions; i++) {
+        allQuestions.push({
+          ...importedItems[i],
+          isImported: true
+        })
+      }
+      
+      // 后面的都是空问题供用户输入
+      for (let i = importedItems.length; i < maxQuestions; i++) {
+        allQuestions.push({
+          id: Date.now() + i,
+          code: `Q${String(i + 1).padStart(3, '0')}`,
+          sourceType: 'text',
+          sortOrder: i + 1,
+          sourceText: '',
+          images: [],
+          answerA: '',
+          answerB: '',
+          isImported: false
+        })
+      }
       
       this.currentSession = {
         id: `s-${Date.now()}`,
         taskId: task.id,
-        taskMode: task.mode || 'custom',
-        questions: selectedItems,
+        questions: allQuestions,
         answers: [],
         userInputs: {},
         startTime: new Date()
@@ -574,12 +608,11 @@ export default {
         id: this.adminManagementTasks.length + 1,
         name: `新任务 ${this.adminManagementTasks.length + 1}`,
         description: '这是一个新创建的模拟任务。',
-        promptA: '请生成专业、详细的回答。',
-        promptB: '请生成简洁、易懂的回答。',
+        promptA: '',
+        promptB: '',
         status: 'draft',
-        mode: 'custom',
         testCount: 5,
-        questionLimit: 10,
+        questionLimit: 49,
         createdBy: this.currentUser.username,
         items: [],
         sessions: []
@@ -649,33 +682,50 @@ export default {
         this.showToast('题目已删除')
       }
     },
-    deleteTask() {
-      if (!this.selectedTask) return
-      
-      // 如果是临时任务（修改已发布任务），删除原始任务
-      if (this.selectedTaskId === 'temp' && this.tempTask) {
-        const originalTaskIndex = this.adminManagementTasks.findIndex(task => task.id === this.tempTask.id)
-        if (originalTaskIndex >= 0) {
-          this.adminManagementTasks.splice(originalTaskIndex, 1)
+    deleteTask(taskId) {
+      if (taskId) {
+        // 根据用户角色删除相应任务列表中的任务
+        if (this.currentUser.role === 'admin') {
+          const index = this.adminTasks.findIndex(task => task.id === taskId)
+          if (index >= 0) {
+            this.adminTasks.splice(index, 1)
+            this.showToast('任务已删除')
+          }
+        } else {
+          const index = this.testerTasks.findIndex(task => task.id === taskId)
+          if (index >= 0) {
+            this.testerTasks.splice(index, 1)
+            this.showToast('任务已删除')
+          }
         }
-        this.tempTask = null
-        this.selectedTaskId = null
-        this.currentView = 'admin-tasks'
-        this.showToast('任务已删除')
-      } else if (this.selectedTaskId === 'temp') {
-        // 新创建的临时任务，直接清除
-        this.tempTask = null
-        this.selectedTaskId = null
-        this.currentView = 'admin-tasks'
-        this.showToast('任务已删除')
+      } else if (!this.selectedTask) {
+        return
       } else {
-        // 删除现有任务
-        const index = this.adminManagementTasks.findIndex(task => task.id === this.selectedTaskId)
-        if (index >= 0) {
-          this.adminManagementTasks.splice(index, 1)
+        // 如果是临时任务（修改已发布任务），删除原始任务
+        if (this.selectedTaskId === 'temp' && this.tempTask) {
+          const originalTaskIndex = this.adminManagementTasks.findIndex(task => task.id === this.tempTask.id)
+          if (originalTaskIndex >= 0) {
+            this.adminManagementTasks.splice(originalTaskIndex, 1)
+          }
+          this.tempTask = null
           this.selectedTaskId = null
           this.currentView = 'admin-tasks'
           this.showToast('任务已删除')
+        } else if (this.selectedTaskId === 'temp') {
+          // 新创建的临时任务，直接清除
+          this.tempTask = null
+          this.selectedTaskId = null
+          this.currentView = 'admin-tasks'
+          this.showToast('任务已删除')
+        } else {
+          // 删除现有任务
+          const index = this.adminManagementTasks.findIndex(task => task.id === this.selectedTaskId)
+          if (index >= 0) {
+            this.adminManagementTasks.splice(index, 1)
+            this.selectedTaskId = null
+            this.currentView = 'admin-tasks'
+            this.showToast('任务已删除')
+          }
         }
       }
     },
@@ -710,6 +760,112 @@ export default {
       this.showToast('任务已保存为草稿')
       this.selectedTaskId = null
       this.currentView = 'admin-tasks'
+    },
+    createImportTask() {
+      // 创建一个新的临时任务用于导入
+      this.tempTask = {
+        id: 'temp-import',
+        name: '新导入任务',
+        description: '',
+        promptA: '',
+        promptB: '',
+        status: 'draft',
+        questionLimit: 49,
+        createdBy: this.currentUser.username,
+        items: [],
+        sessions: []
+      }
+      this.selectedTaskId = 'temp'
+      this.currentView = this.currentUser.role === 'admin' ? 'admin-import' : 'tester-import'
+    },
+    importTask(newTask) {
+      // 根据用户角色添加到相应的任务列表
+      if (this.currentUser.role === 'admin') {
+        this.adminTasks.push(newTask)
+        this.calculateTaskStats(newTask)
+      } else {
+        this.testerTasks.push(newTask)
+        this.calculateTaskStats(newTask)
+      }
+      this.showToast('任务导入成功')
+    },
+    publishImportTask() {
+      if (!this.selectedTask) return
+      
+      // 检查发布前校验
+      const taskEditor = this.$children.find(child => child.$options.name === 'TaskEditor')
+      if (taskEditor && taskEditor.publishCheckText !== '校验通过，可以发布。') {
+        alert(`发布失败：${taskEditor.publishCheckText}`)
+        return
+      }
+      
+      // 为导入任务生成新ID
+      const taskArray = this.currentUser.role === 'admin' ? this.adminTasks : this.testerTasks
+      const newId = Math.max(...taskArray.map(t => t.id), 0) + 1
+      
+      // 创建新任务对象
+      const newTask = {
+        ...this.selectedTask,
+        id: newId,
+        status: 'published'
+      }
+      
+      // 添加到相应的任务列表
+      taskArray.push(newTask)
+      this.calculateTaskStats(newTask)
+      
+      // 清理临时任务
+      this.tempTask = null
+      this.selectedTaskId = null
+      
+      // 显示成功消息并返回任务列表
+      this.showToast('任务导入成功并已发布')
+      this.currentView = this.currentUser.role === 'admin' ? 'admin-test' : 'tester-tasks'
+    },
+    saveImportTask() {
+      if (!this.selectedTask) return
+      
+      // 验证必填字段
+      if (!this.selectedTask.name || !this.selectedTask.description || !this.selectedTask.promptA || !this.selectedTask.promptB) {
+        alert('请填写任务名称、描述和两个Prompt');
+        return;
+      }
+      
+      // 为导入任务生成新ID
+      const taskArray = this.currentUser.role === 'admin' ? this.adminTasks : this.testerTasks
+      const newId = Math.max(...taskArray.map(t => t.id), 0) + 1
+      
+      // 创建新任务对象
+      const newTask = {
+        ...this.selectedTask,
+        id: newId,
+        status: 'unpublished'
+      }
+      
+      // 添加到相应的任务列表
+      taskArray.push(newTask)
+      this.calculateTaskStats(newTask)
+      
+      // 清理临时任务
+      this.tempTask = null
+      this.selectedTaskId = null
+      
+      // 显示成功消息并返回任务列表
+      this.showToast('任务导入成功')
+      this.currentView = this.currentUser.role === 'admin' ? 'admin-test' : 'tester-tasks'
+    },
+    backToTaskManagement() {
+      // 清理任务选择
+      this.selectedTaskId = null
+      // 回到广场任务管理页面
+      this.currentView = 'admin-tasks'
+    },
+    backFromImport() {
+      // 清理临时任务
+      this.tempTask = null
+      this.selectedTaskId = null
+      // 回到任务列表页面
+      this.currentView = this.currentUser.role === 'admin' ? 'admin-test' : 'tester-tasks'
     },
     publishTask() {
       if (!this.selectedTask) return

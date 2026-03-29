@@ -23,10 +23,7 @@
       <div class="card pad">
         <div class="source-wrap">
           <div class="eyebrow">原始问题</div>
-          <textarea v-if="taskMode === 'custom'" v-model="userInput" placeholder="请输入您的问题..." :disabled="inputDisabled" style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 14px; resize: vertical;"></textarea>
-          <div v-else class="predefined-question" style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 14px; background: #f8fafc;">
-            {{ currentQuestion ? currentQuestion.sourceText : '' }}
-          </div>
+          <textarea v-model="userInput" placeholder="请输入您的问题..." :disabled="inputDisabled" style="width: 100%; min-height: 100px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 14px; resize: vertical;"></textarea>
           <div style="margin-top: 12px; display: flex; justify-content: center;">
             <button class="btn primary" @click="generateAnswers" :disabled="generateButtonDisabled">
               开始生成
@@ -134,10 +131,6 @@ export default {
     taskName: {
       type: String,
       default: ''
-    },
-    taskMode: {
-      type: String,
-      default: 'custom'
     }
   },
   data() {
@@ -165,8 +158,16 @@ export default {
     userInput: {
       get() {
         if (!this.currentQuestion) return ''
-        // 确保返回保存的值，即使它是空字符串
-        return this.userInputs[this.currentQuestion.id] !== undefined ? this.userInputs[this.currentQuestion.id] : ''
+        // 如果已经有保存的用户输入，返回保存的值
+        if (this.userInputs[this.currentQuestion.id] !== undefined) {
+          return this.userInputs[this.currentQuestion.id]
+        }
+        // 如果是导入的问题，显示导入的内容
+        if (this.currentQuestion.isImported && this.currentQuestion.sourceText) {
+          return this.currentQuestion.sourceText
+        }
+        // 否则返回空字符串
+        return ''
       },
       set(value) {
         if (this.currentQuestion) {
@@ -249,10 +250,9 @@ export default {
     generateAnswers() {
       console.log('generateAnswers called, userInput:', this.userInput)
       console.log('currentQuestion:', this.currentQuestion)
-      console.log('taskMode:', this.taskMode)
       
-      // 检查用户是否输入内容（仅在自定义模式下）
-      if (this.taskMode === 'custom' && !this.userInput.trim()) {
+      // 检查用户是否输入内容
+      if (!this.userInput.trim()) {
         alert('请输入原始问题');
         return;
       }
@@ -260,15 +260,8 @@ export default {
       // 确保当前题目存在
       if (this.currentQuestion) {
         // 保存当前用户输入到userInputs对象
-        let inputValue
-        if (this.taskMode === 'custom') {
-          inputValue = this.userInput
-          console.log('User input saved before generating answers:', this.userInputs)
-        } else {
-          // 单题模式下，使用预定义的问题作为用户输入
-          inputValue = this.currentQuestion.sourceText
-          console.log('Predefined question used as user input:', inputValue)
-        }
+        const inputValue = this.userInput
+        console.log('User input saved before generating answers:', this.userInputs)
         this.$set(this.userInputs, this.currentQuestion.id, inputValue)
         // 传递用户输入变化给父组件
         this.$emit('user-input-change', this.currentQuestion.id, inputValue)
@@ -281,6 +274,19 @@ export default {
       
       // 模拟生成过程（实际项目中这里会调用API）
       setTimeout(() => {
+        // 模拟生成回答
+        if (this.currentQuestion) {
+          // 生成模拟回答A和B
+          const mockAnswerA = `这是针对问题"${this.userInput}"的回答A，使用了Prompt A的指令。`
+          const mockAnswerB = `这是针对问题"${this.userInput}"的回答B，使用了Prompt B的指令。`
+          
+          // 保存生成的回答到当前问题对象
+          this.currentQuestion.answerA = mockAnswerA
+          this.currentQuestion.answerB = mockAnswerB
+          
+          console.log('Generated answers saved to currentQuestion:', this.currentQuestion)
+        }
+        
         // 显示答案
         this.showAnswers = true
         this.isGenerating = false

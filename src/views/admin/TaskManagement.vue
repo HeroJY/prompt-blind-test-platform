@@ -42,7 +42,6 @@
           <div class="meta-row">
             <span class="meta-chip">题目数: {{ task.items.length }}</span>
             <span class="meta-chip">参与: {{ task.sessions.length }} 人</span>
-            <span class="meta-chip">模式: {{ task.mode === 'custom' ? '自定义模式' : '单题模式' }}</span>
           </div>
         </div>
         <div class="right-actions">
