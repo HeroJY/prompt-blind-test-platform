@@ -44,78 +44,86 @@
         </div>
       </div>
 
-      <!-- 题目管理模块 -->
-      <div class="panel-grid">
-        <div class="card pad">
-          <div class="eyebrow">新增题目</div>
-          <div class="field-grid">
-            <div class="grid-2">
-              <div>
-                <label>题目标识码</label>
-                <input v-model="newItemForm.code" id="newItemCode" placeholder="例如 Q101" />
+      <!-- 任务测试案例模块 -->
+      <div class="card pad" style="margin-top: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+          <div class="eyebrow">任务测试案例</div>
+        </div>
+        
+        <!-- 新增题目和批量导入模拟 -->
+        <div class="panel-grid">
+          <div class="card pad">
+            <div class="eyebrow">新增题目</div>
+            <div class="field-grid">
+              <div class="grid-2">
+                <div>
+                  <label>题目标识码</label>
+                  <input v-model="newItemForm.code" id="newItemCode" placeholder="例如 Q101" />
+                </div>
+                <div>
+                  <label>排序号</label>
+                  <input v-model.number="newItemForm.sortOrder" type="number" id="newItemOrder" value="99" />
+                </div>
               </div>
               <div>
-                <label>排序号</label>
-                <input v-model.number="newItemForm.sortOrder" type="number" id="newItemOrder" value="99" />
+                <label>原始问题文本</label>
+                <textarea v-model="newItemForm.sourceText" id="newItemSourceText" placeholder="输入原始问题文字"></textarea>
               </div>
             </div>
+            <div class="btn-row" style="margin-top:18px;">
+              <button class="btn primary" id="addItemBtn" @click="addItem">添加题目</button>
+              <button class="btn secondary" id="fillSampleItemBtn" @click="fillSampleItem">填充示例</button>
+            </div>
+          </div>
+
+          <div class="card pad">
+            <div class="eyebrow">批量导入模拟</div>
+            <div class="upload-box">
+              <div style="font-size:20px;font-weight:800;">ZIP 导入包</div>
+              <div style="margin-top:8px;color:var(--muted);font-size:14px;line-height:1.8;">模拟 manifest.csv + images/ 目录结构。点击按钮后会一次性向当前任务加入几条演示数据。</div>
+              <div class="btn-row" style="justify-content:center;margin-top:18px;">
+                <button class="btn primary" id="mockImportBtn" @click="$emit('mock-import', mockImportText)">批量导入</button>
+              </div>
+              <div class="file-chip-row">
+                <span class="file-chip">manifest.csv</span>
+                <span class="file-chip">images/q301_1.jpg</span>
+                <span class="file-chip">images/q301_2.jpg</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 题目列表 -->
+        <div style="margin-top:18px;">
+          <div class="topbar" style="margin-bottom:12px;">
             <div>
-              <label>原始问题文本</label>
-              <textarea v-model="newItemForm.sourceText" id="newItemSourceText" placeholder="输入原始问题文字"></textarea>
+              <div class="eyebrow">题目列表</div>
+              <div style="color:var(--muted);font-size:14px;line-height:1.8;">
+                发布后不可编辑，所以这里用于发布前校对题目内容。当前原型只演示新增和查看，不做逐条编辑。</div>
             </div>
           </div>
-          <div class="btn-row" style="margin-top:18px;">
-            <button class="btn primary" id="addItemBtn" @click="addItem">添加题目</button>
-            <button class="btn secondary" id="fillSampleItemBtn" @click="fillSampleItem">填充示例</button>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>题号</th>
+                  <th>原始问题摘要</th>
+                  <th>排序</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="itemTableBody">
+                <tr v-for="(item, index) in selectedTask.items" :key="index">
+                  <td>{{ item.code }}</td>
+                  <td>{{ item.sourceText }}</td>
+                  <td>{{ item.sortOrder || 99 }}</td>
+                  <td>已添加</td>
+                  <td><button class="btn danger small" @click="$emit('delete-item', item.id)">删除</button></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-        </div>
-
-        <div class="card pad">
-          <div class="eyebrow">批量导入模拟</div>
-          <div class="upload-box">
-            <div style="font-size:20px;font-weight:800;">ZIP 导入包</div>
-            <div style="margin-top:8px;color:var(--muted);font-size:14px;line-height:1.8;">模拟 manifest.csv + images/ 目录结构。点击按钮后会一次性向当前任务加入几条演示数据。</div>
-            <div class="btn-row" style="justify-content:center;margin-top:18px;">
-              <button class="btn primary" id="mockImportBtn" @click="$emit('mock-import', mockImportText)">批量导入</button>
-            </div>
-            <div class="file-chip-row">
-              <span class="file-chip">manifest.csv</span>
-              <span class="file-chip">images/q301_1.jpg</span>
-              <span class="file-chip">images/q301_2.jpg</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card pad">
-        <div class="topbar" style="margin-bottom:12px;">
-          <div>
-            <div class="eyebrow">题目列表</div>
-            <div style="color:var(--muted);font-size:14px;line-height:1.8;">
-              发布后不可编辑，所以这里用于发布前校对题目内容。当前原型只演示新增和查看，不做逐条编辑。</div>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>题号</th>
-                <th>原始问题摘要</th>
-                <th>排序</th>
-                <th>状态</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody id="itemTableBody">
-              <tr v-for="(item, index) in selectedTask.items" :key="index">
-                <td>{{ item.code }}</td>
-                <td>{{ item.sourceText }}</td>
-                <td>{{ item.sortOrder || 99 }}</td>
-                <td>已添加</td>
-                <td><button class="btn danger small" @click="$emit('delete-item', item.id)">删除</button></td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </div>
     </div>
@@ -210,11 +218,6 @@ export default {
 </script>
 
 <style scoped>
-/* 确保模块之间的间距一致 */
-.card {
-  margin-bottom: 18px;
-}
-
 /* 确保panel-grid内部的卡片间距一致 */
 .panel-grid {
   display: grid;
