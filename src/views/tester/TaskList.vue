@@ -23,11 +23,10 @@
             <span class="meta-chip">测试次数: {{ taskTestCounts[task.id] || 0 }}</span>
           </div>
         </div>
-        <div class="right-actions" style="flex-direction: row; min-width: 480px;">
+        <div class="right-actions" style="flex-direction: row; min-width: 480px; justify-content: flex-end;">
           <button class="btn primary" @click="$emit('view-task-detail', task.id)">查看详情</button>
-          <button class="btn success" @click="$emit('start-task', task.id)">开始测试</button>
           <button class="btn secondary" @click="$emit('view-history', task.id)">历史操作</button>
-          <button class="btn info" @click="showTaskStats(task)">统计</button>
+          <button class="btn success" @click="showTaskStats(task)">统计</button>
           <button class="btn danger" @click="$emit('delete-task', task.id)">删除</button>
         </div>
       </div>

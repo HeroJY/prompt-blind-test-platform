@@ -39,19 +39,19 @@
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
           <div class="eyebrow">提示词导入</div>
           <div class="btn-row">
-            <button class="btn secondary" @click="triggerFileUpload">上传提示词</button>
+            <button class="btn primary" @click="triggerFileUpload">上传提示词</button>
             <input type="file" ref="fileInput" style="display: none" @change="handleFileUpload" />
           </div>
         </div>
         <div class="field-grid">
           <div class="grid-2">
             <div>
-              <label>Prompt A</label>
-              <textarea v-model="editorForm.promptA" id="editorPromptA"></textarea>
+              <label>Prompt A <span style="color: #94a3b8; font-size: 12px; font-weight: normal;">（只读，请上传文件解析）</span></label>
+              <textarea v-model="editorForm.promptA" id="editorPromptA" disabled class="disabled-textarea"></textarea>
             </div>
             <div>
-              <label>Prompt B</label>
-              <textarea v-model="editorForm.promptB" id="editorPromptB"></textarea>
+              <label>Prompt B <span style="color: #94a3b8; font-size: 12px; font-weight: normal;">（只读，请上传文件解析）</span></label>
+              <textarea v-model="editorForm.promptB" id="editorPromptB" disabled class="disabled-textarea"></textarea>
             </div>
           </div>
         </div>
@@ -65,7 +65,7 @@
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
           <div class="eyebrow">测试数据导入</div>
           <div class="btn-row">
-            <button class="btn secondary" @click="triggerDataUpload">上传数据</button>
+            <button class="btn primary" @click="triggerDataUpload">上传数据</button>
             <input type="file" ref="dataInput" style="display: none" @change="handleDataUpload" />
           </div>
         </div>
@@ -290,6 +290,18 @@ export default {
   grid-template-columns: 1fr 1fr;
   gap: 18px;
   margin-bottom: 18px;
+}
+
+/* 不可编辑文本框样式 */
+.disabled-textarea {
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.disabled-textarea::placeholder {
+  color: #94a3b8;
 }
 
 /* 响应式调整 */

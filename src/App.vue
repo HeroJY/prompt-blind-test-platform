@@ -192,7 +192,7 @@ export default {
           promptA: '这里是假的提示词1。',
           promptB: '请使用假的提示词2，用高情商生成回复：先共情，再给回答。',
           status: 'published',
-          questionLimit: 3,
+          questionLimit: 49,
           createdBy: 'admin01',
           items: [
             { id: 101, code: 'Q001', sourceType: 'text', sortOrder: 1, sourceText: '用户投诉：我昨天购买的商品今天就降价了，而且客服回复非常慢。请生成一段安抚用户情绪、解释规则并给出合理补偿建议的话术。', images: [], answerA: '您好，非常抱歉给您带来了不好的购物体验，也理解您看到商品短时间内出现价格变化后会产生落差感。平台活动价格会随时间动态调整，但我们非常重视您的感受。为了表达歉意，建议为您申请一张优惠券或积分补偿；如果您的订单符合价保条件，我也可以继续协助您核实处理。', answerB: '真的非常抱歉让您遇到这样的情况，换作是我也会感到失落。商品价格会因为活动时间不同而产生调整，这边无法直接保证下单后价格始终不变，但我会尽力帮您争取更好的处理方案，并优先为您申请补偿福利。' },
@@ -221,7 +221,7 @@ export default {
           promptA: '请对输入的客户信息进行综合风险分析，再按用户提问生成结构化回答。',
           promptB: '请把输入的客户信息整合成要点，用更口语化的表达回答用户，并尽可能减少遗漏。',
           status: 'published',
-          questionLimit: 2,
+          questionLimit: 49,
           createdBy: 'admin01',
           items: [
             { id: 201, code: 'Q201', sourceType: 'text', sortOrder: 1, sourceText: '分析仪表盘数据，主要波动集中在转化率与客单价，需要先确认渠道结构变化。', images: [], answerA: '从多图可以看出指标主要波动集中在转化率与客单价，需要先确认渠道结构变化。', answerB: '这些图片最关键的信息是转化率下滑和销售额波动，回答时需要把原因和建议一起给出。' },
@@ -238,7 +238,7 @@ export default {
           promptA: '你是一名资深客服专家，请输出安抚式回复，先表达理解，再说明平台规则，最后给出可执行的补偿建议，整体语气温和、稳定、清晰。',
           promptB: '请作为高情商客服生成回复：先共情，再说明价格变动或流程机制，最后给出一到两种明确处理路径，并强调继续协助。',
           status: 'unpublished',
-          questionLimit: 3,
+          questionLimit: 49,
           createdBy: 'admin01',
           items: [
             { id: 101, code: 'Q001', sourceType: 'text', sortOrder: 1, sourceText: '用户投诉：我昨天购买的商品今天就降价了，而且客服回复非常慢。请生成一段安抚用户情绪、解释规则并给出合理补偿建议的话术。', images: [], answerA: '您好，非常抱歉给您带来了不好的购物体验，也理解您看到商品短时间内出现价格变化后会产生落差感。平台活动价格会随时间动态调整，但我们非常重视您的感受。为了表达歉意，建议为您申请一张优惠券或积分补偿；如果您的订单符合价保条件，我也可以继续协助您核实处理。', answerB: '真的非常抱歉让您遇到这样的情况，换作是我也会感到失落。商品价格会因为活动时间不同而产生调整，这边无法直接保证下单后价格始终不变，但我会尽力帮您争取更好的处理方案，并优先为您申请补偿福利。' },
@@ -267,7 +267,7 @@ export default {
           promptA: '请对多张图片进行综合理解，先总结关键信息，再按用户提问生成结构化回答。',
           promptB: '请把多图信息整合成要点，用更口语化的表达回答用户，并尽可能减少遗漏。',
           status: 'unpublished',
-          questionLimit: 2,
+          questionLimit: 49,
           createdBy: 'admin01',
           items: [
             { id: 201, code: 'Q201', sourceType: 'text', sortOrder: 1, sourceText: '分析仪表盘数据，主要波动集中在转化率与客单价，需要先确认渠道结构变化。', images: [], answerA: '从多图可以看出指标主要波动集中在转化率与客单价，需要先确认渠道结构变化。', answerB: '这些图片最关键的信息是转化率下滑和销售额波动，回答时需要把原因和建议一起给出。' },
@@ -284,7 +284,7 @@ export default {
           promptA: '你是一名资深客服专家，请输出安抚式回复，先表达理解，再说明平台规则，最后给出可执行的补偿建议，整体语气温和、稳定、清晰。',
           promptB: '请作为高情商客服生成回复：先共情，再说明价格变动或流程机制，最后给出一到两种明确处理路径，并强调继续协助。',
           status: 'unpublished',
-          questionLimit: 3,
+          questionLimit: 49,
           createdBy: 'admin01',
           items: [
             { id: 101, code: 'Q001', sourceType: 'text', sortOrder: 1, sourceText: '用户投诉：我昨天购买的商品今天就降价了，而且客服回复非常慢。请生成一段安抚用户情绪、解释规则并给出合理补偿建议的话术。', images: [], answerA: '您好，非常抱歉给您带来了不好的购物体验，也理解您看到商品短时间内出现价格变化后会产生落差感。平台活动价格会随时间动态调整，但我们非常重视您的感受。为了表达歉意，建议为您申请一张优惠券或积分补偿；如果您的订单符合价保条件，我也可以继续协助您核实处理。', answerB: '真的非常抱歉让您遇到这样的情况，换作是我也会感到失落。商品价格会因为活动时间不同而产生调整，这边无法直接保证下单后价格始终不变，但我会尽力帮您争取更好的处理方案，并优先为您申请补偿福利。' },
@@ -304,7 +304,7 @@ export default {
           promptA: '请对多张图片进行综合理解，先总结关键信息，再按用户提问生成结构化回答。',
           promptB: '请把多图信息整合成要点，用更口语化的表达回答用户，并尽可能减少遗漏。',
           status: 'unpublished',
-          questionLimit: 2,
+          questionLimit: 49,
           createdBy: 'admin01',
           items: [
             { id: 201, code: 'Q201', sourceType: 'text', sortOrder: 1, sourceText: '分析仪表盘数据，主要波动集中在转化率与客单价，需要先确认渠道结构变化。', images: [], answerA: '从多图可以看出指标主要波动集中在转化率与客单价，需要先确认渠道结构变化。', answerB: '这些图片最关键的信息是转化率下滑和销售额波动，回答时需要把原因和建议一起给出。' },
@@ -478,6 +478,7 @@ export default {
         this.currentSession.userInputs = this.currentSession.userInputs || {}
         this.currentSession.userInputs[questionId] = value
         console.log('User input changed:', questionId, value)
+        // console.log('真是你个老666：' , this.currentSession);
       }
     },
     selectAnswer(answer) {

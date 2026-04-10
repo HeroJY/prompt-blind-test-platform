@@ -23,7 +23,7 @@
       <div class="card pad">
         <div class="source-wrap">
           <div class="eyebrow">测试数据</div>
-          <textarea v-model="currentTestData" placeholder="输入测试数据..." :disabled="inputDisabled" style="width: 100%; min-height: 80px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 14px; resize: vertical;"></textarea>
+          <textarea v-model="currentTestData" @input="handelTestDataChange" placeholder="输入测试数据..." :disabled="inputDisabled" style="width: 100%; min-height: 80px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 14px; resize: vertical;"></textarea>
         </div>
       </div>
 
@@ -147,14 +147,15 @@ export default {
   data() {
     return {
       userInputs: {},
-      testData: '',
       testDataByQuestion: {},
+      currentTestData: '',
       showAnswers: false,
       generateButtonDisabled: false,
       inputDisabled: false,
       isGenerating: false,
       modelJudgeAnswers: {},
-      isJudging: false
+      isJudging: false,
+      testDataInitialized: false
     }
   },
   computed: {
@@ -198,17 +199,6 @@ export default {
       if (!this.currentQuestion) return null
       return this.modelJudgeAnswers[this.currentQuestion.id]
     },
-    currentTestData: {
-      get() {
-        if (!this.currentQuestion) return ''
-        return this.testDataByQuestion[this.currentQuestion.id] || ''
-      },
-      set(value) {
-        if (this.currentQuestion) {
-          this.$set(this.testDataByQuestion, this.currentQuestion.id, value)
-        }
-      }
-    }
   },
   watch: {
     currentQuestionIndex(newIndex) {
@@ -217,6 +207,18 @@ export default {
       console.log('Current question:', this.currentQuestion)
       console.log('User inputs:', this.userInputs)
       console.log('Model judge answers:', this.modelJudgeAnswers)
+      
+      // 保存当前问题的测试数据
+      // if (this.currentQuestion) {
+      //   this.testDataByQuestion[this.currentQuestion.id] = this.currentTestData
+      // }
+      
+      // 更新 currentTestData 为新问题的测试数据
+      if (this.currentQuestion) {
+        this.currentTestData = this.testDataByQuestion[this.currentQuestion.id] || ''
+      } else {
+        this.currentTestData = ''
+      }
       
       // 检查当前题目是否已经有答案
       if (this.selectedAnswer) {
@@ -239,24 +241,38 @@ export default {
     },
     task: {
       handler(newTask) {
-        if (newTask) {
-          this.testData = newTask.testData || ''
-          // 初始化 testDataByQuestion，使用任务级别的测试数据作为默认值
-          this.testDataByQuestion = {}
+        // console.log('真是你个老6: ', newTask);
+        // console.log('真是你个老6: ', this.testDataByQuestion);
+        if (newTask && !this.testDataInitialized) {
+          this.testDataInitialized = true
           if (this.currentSession && this.currentSession.questions) {
             this.currentSession.questions.forEach(question => {
-              this.testDataByQuestion[question.id] = newTask.testData || ''
+              if (!this.testDataByQuestion.hasOwnProperty(question.id)) {
+                this.testDataByQuestion[question.id] = newTask.testData || ''
+              }
             })
           }
-        } else {
-          this.testData = ''
+          // 更新 currentTestData 为当前问题的测试数据
+          if (this.currentQuestion) {
+            this.currentTestData = this.testDataByQuestion[this.currentQuestion.id] || ''
+          }
+        } else if (!newTask) {
           this.testDataByQuestion = {}
+          this.currentTestData = ''
+          this.testDataInitialized = false
         }
       },
-      immediate: true
+      immediate: true,
+      deep: false
     }
   },
   methods: {
+    handelTestDataChange() {
+      if (this.currentQuestion) {
+        this.$set(this.testDataByQuestion, this.currentQuestion.id, this.currentTestData)
+      }
+      // console.log('变了数据: ', this.testDataByQuestion);
+    },
     selectAnswer(answer) {
       this.$emit('select-answer', answer)
     },
