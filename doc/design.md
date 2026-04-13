@@ -4,22 +4,19 @@
 
 ### 1.1 前端技术栈
 
-- **框架**：Vue 3
-- **语言**：TypeScript
-- **构建工具**：Vite
-- **CSS框架**：Tailwind CSS
-- **状态管理**：Pinia
-- **路由**：Vue Router
+- **框架**：Vue 2
+- **构建工具**：Vue CLI
+- **状态管理**：组件内状态管理
+- 路由： Vue Router
 - **HTTP客户端**：Axios
 
 ### 1.2 后端技术栈
 
-- **语言**：Python 3.8+
+- **语言**：Python 3.6
 - **Web框架**：FastAPI
 - **认证**：JWT
-- **密码加密**：bcrypt
-- **文件操作**：标准库
-- **数据验证**：Pydantic
+- **AI模型集成**：用于prompt生成和测试结果分析
+- **存储**：结构化文件存储（JSON格式）
 
 ### 1.3 存储方案
 
@@ -40,7 +37,7 @@
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │     前端应用     │────>│     后端API      │────>│  文件系统存储    │
-│ Vue 3 + TypeScript│     │ FastAPI + Python │     │  JSON文件      │
+│       Vue2│     │      FastAPI + Python │     │   JSON文件      │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
@@ -52,7 +49,6 @@
   - 排行榜模块：展示prompt排名
   - 个人中心模块：管理用户信息
   - 公共组件：复用组件
-
 - **后端模块**：
   - 认证模块：处理用户认证和授权
   - Prompt模块：管理prompt的CRUD操作
@@ -63,165 +59,122 @@
 
 ### 2.3 数据流向
 
-1. **用户注册/登录**：
-   - 前端发送注册/登录请求
-   - 后端验证并返回JWT token
-   - 前端存储token并维护登录状态
-
-2. **盲选测试**：
-   - 前端请求测试匹配
-   - 后端随机匹配两个prompt
-   - 前端展示prompt效果
-   - 用户提交投票
-   - 后端记录投票结果
-   - 前端展示测试结果
-
-3. **Prompt上传**：
-   - 前端提交prompt内容
-   - 后端验证并存储
-   - 前端显示上传结果
+1. **用户登录流程**：
+   - 访问首页 → 点击登录 → 填写凭证 → 验证 → 进入个人中心
+2. **盲选测试流程**：
+   - 登录 → 选择测试任务 → 系统生成测试轮次（奇数个问题） → 逐题测试投票 → 保存题目测试结果 → 展示结果和分析
+3. **Prompt管理流程**：
+   - 登录 → 进入个人中心 → 一键生成prompt
 
 ## 3. 前端设计
 
 ### 3.1 目录结构
 
 ```
-frontend/
-├── public/              # 静态资源
+/
 ├── src/
-│   ├── assets/          # 资源文件
 │   ├── components/      # 公共组件
+│   │   └── Sidebar.vue  # 侧边栏组件
 │   ├── views/           # 页面组件
-│   ├── router/          # 路由配置
-│   ├── stores/          # 状态管理
-│   ├── services/        # API服务
-│   ├── utils/           # 工具函数
-│   ├── types/           # TypeScript类型
+│   │   ├── admin/       # 管理员视图
+│   │   │   ├── PromptGenerate.vue  # Prompt一键生成
+│   │   │   ├── Stats.vue            # 统计分析
+│   │   │   ├── TaskEditor.vue       # 任务编辑
+│   │   │   └── TaskManagement.vue   # 任务管理
+│   │   ├── auth/        # 认证视图
+│   │   │   └── Login.vue            # 登录页面
+│   │   └── tester/      # 测试员视图
+│   │       ├── History.vue          # 测试历史
+│   │       ├── ImportTaskEditor.vue # 导入任务编辑
+│   │       ├── TaskDetail.vue       # 任务详情
+│   │       ├── TaskList.vue         # 任务列表
+│   │       └── TestSession.vue      # 测试会话
 │   ├── App.vue          # 根组件
-│   └── main.ts          # 入口文件
+│   └── main.js          # 入口文件
 ├── index.html           # HTML模板
-├── tsconfig.json        # TypeScript配置
-├── vite.config.ts       # Vite配置
-└── package.json         # 依赖配置
+├── package.json         # 依赖配置
+├── vue.config.js        # Vue CLI配置
+└── babel.config.js      # Babel配置
 ```
 
 ### 3.2 核心组件
 
 | 组件 | 功能 | 位置 |
 |------|------|------|
-| AuthForm | 登录/注册表单 | components/auth/ |
-| TestCard | 测试卡片 | components/test/ |
-| VoteButton | 投票按钮 | components/test/ |
-| Leaderboard | 排行榜 | components/leaderboard/ |
-| UserProfile | 用户信息 | components/profile/ |
-| PromptForm | Prompt上传表单 | components/prompt/ |
+| Login | 登录页面 | views/auth/Login.vue |
+| Sidebar | 侧边栏导航 | components/Sidebar.vue |
+| TaskList | 任务列表 | views/tester/TaskList.vue |
+| TaskDetail | 任务详情 | views/tester/TaskDetail.vue |
+| TestSession | 测试会话 | views/tester/TestSession.vue |
+| History | 测试历史 | views/tester/History.vue |
+| TaskManagement | 任务管理 | views/admin/TaskManagement.vue |
+| TaskEditor | 任务编辑 | views/admin/TaskEditor.vue |
+| Stats | 统计分析 | views/admin/Stats.vue |
+| PromptGenerate | Prompt一键生成 | views/admin/PromptGenerate.vue |
+| ImportTaskEditor | 导入任务编辑 | views/tester/ImportTaskEditor.vue |
 
 ### 3.3 页面设计
 
-| 页面 | 组件 | 路由 |
+| 视图 | 组件 | 描述 |
 |------|------|------|
-| 首页 | HomeView | / |
-| 登录页 | LoginView | /login |
-| 注册页 | RegisterView | /register |
-| 测试页 | TestView | /test |
-| 排行榜页 | LeaderboardView | /leaderboard |
-| 个人中心页 | ProfileView | /profile |
-| Prompt上传页 | UploadPromptView | /upload |
+| 登录视图 | Login | 用户登录页面 |
+| 测试员任务列表 | TaskList | 测试员查看和选择测试任务 |
+| 测试员任务详情 | TaskDetail | 测试员查看任务详细信息 |
+| 测试会话 | TestSession | 测试员进行盲选测试的界面 |
+| 测试历史 | History | 测试员查看测试历史记录 |
+| 导入任务编辑 | ImportTaskEditor | 测试员导入和编辑测试任务 |
+| 管理员任务管理 | TaskManagement | 管理员管理测试任务 |
+| 管理员任务编辑 | TaskEditor | 管理员编辑测试任务 |
+| 管理员统计分析 | Stats | 管理员查看测试统计数据 |
+| 管理员Prompt生成 | PromptGenerate | 管理员一键生成Prompt |
 
 ### 3.4 状态管理
 
-```typescript
-// stores/user.ts
-export const useUserStore = defineStore('user', {
-  state: () => ({
-    user: null as User | null,
-    token: localStorage.getItem('token') || null
-  }),
-  actions: {
-    setUser(user: User) {
-      this.user = user;
-    },
-    setToken(token: string) {
-      this.token = token;
-      localStorage.setItem('token', token);
-    },
-    logout() {
-      this.user = null;
-      this.token = null;
-      localStorage.removeItem('token');
-    }
-  }
-});
+项目使用组件内状态管理，主要状态包括：
 
-// stores/test.ts
-export const useTestStore = defineStore('test', {
-  state: () => ({
-    currentTest: null as TestSession | null,
-    testResults: [] as TestResult[]
-  }),
-  actions: {
-    setCurrentTest(test: TestSession) {
-      this.currentTest = test;
-    },
-    addTestResult(result: TestResult) {
-      this.testResults.push(result);
-    }
-  }
-});
-```
+**App.vue 中的状态：**
+
+- `isLoggedIn`：用户登录状态
+- `currentUser`：当前用户信息（包含角色）
+- `currentView`：当前视图
+- `selectedTaskId`：当前选中的任务ID
+- `currentSession`：当前测试会话
+- `currentQuestionIndex`：当前问题索引
+- `selectedAnswer`：用户选择的答案
+- `userInputs`：用户输入
+- `historyOperations`：历史操作记录
+- `adminManagementTasks`：管理员管理的任务
+- `adminTasks`：管理员测试任务
+- `testerTasks`：测试员任务
+
+**TestSession.vue 中的状态：**
+
+- 测试会话相关状态
+- 大模型裁判结果
+- 测试数据
+
+**其他组件状态：**
+
+- 各组件根据需要维护自己的状态
 
 ### 3.5 API服务
 
-```typescript
-// services/api.ts
-import axios from 'axios';
+当前项目未使用API服务，而是使用本地模拟数据：
 
-const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
+- **数据存储**：在App.vue中维护本地模拟数据
+- **任务数据**：包含管理员任务、测试员任务等
+- **测试会话**：本地维护测试会话数据
+- **历史记录**：本地记录测试历史操作
 
-// 请求拦截器
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+**模拟数据结构：**
 
-export default api;
+- 任务数据：包含id、name、description、promptA、promptB、items等
+- 测试会话：包含id、taskId、questions、answers、userInputs等
+- 历史操作：包含id、type、userId、taskId、timestamp等
 
-// services/auth.ts
-export const authService = {
-  register: (data: RegisterData) => api.post('/auth/register', data),
-  login: (data: LoginData) => api.post('/auth/login', data),
-  getProfile: () => api.get('/auth/profile')
-};
+**未来扩展**：
 
-// services/test.ts
-export const testService = {
-  startTest: (category: string) => api.post('/test/start', { category }),
-  submitVote: (data: VoteData) => api.post('/test/vote', data),
-  getResults: () => api.get('/test/results')
-};
-
-// services/prompt.ts
-export const promptService = {
-  upload: (data: PromptData) => api.post('/prompt/upload', data),
-  list: (params: ListParams) => api.get('/prompt/list', { params }),
-  get: (id: string) => api.get(`/prompt/${id}`)
-};
-
-// services/leaderboard.ts
-export const leaderboardService = {
-  get: (category: string, sortBy: string) => api.get('/leaderboard', {
-    params: { category, sortBy }
-  })
-};
-```
+- 可根据需要添加API服务，连接后端FastAPI接口
 
 ## 4. 后端设计
 
@@ -235,23 +188,27 @@ backend/
 │   │   ├── prompt.py    # Prompt相关API
 │   │   ├── test.py      # 测试相关API
 │   │   ├── vote.py      # 投票相关API
-│   │   └── leaderboard.py # 排行榜相关API
+│   │   ├── leaderboard.py # 排行榜相关API
+│   │   └── ai.py        # AI相关API
 │   ├── services/        # 业务逻辑
 │   │   ├── auth.py      # 认证服务
 │   │   ├── prompt.py    # Prompt服务
 │   │   ├── test.py      # 测试服务
 │   │   ├── vote.py      # 投票服务
-│   │   └── leaderboard.py # 排行榜服务
+│   │   ├── leaderboard.py # 排行榜服务
+│   │   └── ai.py        # AI服务
 │   ├── models/          # 数据模型
 │   │   ├── user.py      # 用户模型
 │   │   ├── prompt.py    # Prompt模型
 │   │   ├── test.py      # 测试模型
-│   │   └── vote.py      # 投票模型
+│   │   ├── vote.py      # 投票模型
+│   │   └── ai.py        # AI模型
 │   ├── schemas/         # 数据验证
 │   │   ├── user.py      # 用户相关Schema
 │   │   ├── prompt.py    # Prompt相关Schema
 │   │   ├── test.py      # 测试相关Schema
-│   │   └── vote.py      # 投票相关Schema
+│   │   ├── vote.py      # 投票相关Schema
+│   │   └── ai.py        # AI相关Schema
 │   ├── storage/         # 存储服务
 │   │   ├── base.py      # 存储基类
 │   │   ├── user.py      # 用户存储
@@ -261,7 +218,8 @@ backend/
 │   ├── utils/           # 工具函数
 │   │   ├── jwt.py       # JWT工具
 │   │   ├── password.py  # 密码工具
-│   │   └── file.py      # 文件操作工具
+│   │   ├── file.py      # 文件操作工具
+│   │   └── ai.py        # AI工具
 │   ├── main.py          # 应用入口
 │   └── config.py        # 配置文件
 ├── data/                # 数据存储目录
@@ -500,9 +458,6 @@ class TestService:
         if len(prompts) < 2:
             raise ValueError("Not enough prompts in this category")
         
-        # 随机选择两个prompt
-        prompt1, prompt2 = random.sample(prompts, 2)
-        
         # 创建测试会话
         session = self.session_storage.create({
             "user_id": user_id,
@@ -510,20 +465,30 @@ class TestService:
             "completed_at": None
         })
         
-        # 创建测试结果记录
-        test_result = self.result_storage.create({
-            "session_id": session["id"],
-            "prompt1_id": prompt1["id"],
-            "prompt2_id": prompt2["id"],
-            "winner_id": None,
-            "created_at": datetime.utcnow().isoformat()
-        })
+        # 生成3个测试问题（奇数个问题）
+        test_results = []
+        test_prompts = []
+        
+        for _ in range(3):
+            # 随机选择两个prompt
+            prompt1, prompt2 = random.sample(prompts, 2)
+            
+            # 创建测试结果记录
+            test_result = self.result_storage.create({
+                "session_id": session["id"],
+                "prompt1_id": prompt1["id"],
+                "prompt2_id": prompt2["id"],
+                "winner_id": None,
+                "created_at": datetime.utcnow().isoformat()
+            })
+            
+            test_results.append(test_result)
+            test_prompts.append({"prompt1": prompt1, "prompt2": prompt2})
         
         return {
             "session": session,
-            "test_result": test_result,
-            "prompt1": prompt1,
-            "prompt2": prompt2
+            "test_results": test_results,
+            "test_prompts": test_prompts
         }
     
     def submit_vote(self, user_id: str, test_result_id: str, winner_id: str) -> Dict[str, Any]:
@@ -536,11 +501,17 @@ class TestService:
         test_result["winner_id"] = winner_id
         updated_test_result = self.result_storage.update(test_result_id, test_result)
         
-        # 更新测试会话
+        # 检查测试会话是否完成
         session = self.session_storage.get(test_result["session_id"])
         if session:
-            session["completed_at"] = datetime.utcnow().isoformat()
-            self.session_storage.update(session["id"], session)
+            # 获取该会话的所有测试结果
+            all_results = self.result_storage.get_by_session(session["id"])
+            # 检查是否所有测试结果都已完成
+            all_completed = all(result.get("winner_id") is not None for result in all_results)
+            
+            if all_completed:
+                session["completed_at"] = datetime.utcnow().isoformat()
+                self.session_storage.update(session["id"], session)
         
         return updated_test_result
     
@@ -551,6 +522,143 @@ class TestService:
     def get_test_results(self, session_id: str) -> List[Dict[str, Any]]:
         results = self.result_storage.get_by_session(session_id)
         return results
+```
+
+#### 4.2.4 AI服务
+
+```python
+# services/ai.py
+from typing import Dict, Any, List
+from app.storage.test import TestSessionStorage, TestResultStorage
+from app.storage.prompt import PromptStorage
+
+class AIService:
+    def __init__(self):
+        self.session_storage = TestSessionStorage()
+        self.result_storage = TestResultStorage()
+        self.prompt_storage = PromptStorage()
+    
+    def analyze_test_results(self, test_session_id: str, user_id: str) -> Dict[str, Any]:
+        # 获取测试会话
+        session = self.session_storage.get(test_session_id)
+        if not session or session.get("user_id") != user_id:
+            raise ValueError("Test session not found or access denied")
+        
+        # 获取测试结果
+        test_results = self.result_storage.get_by_session(test_session_id)
+        if not test_results:
+            raise ValueError("No test results found")
+        
+        # 分析测试结果
+        prompt_wins = {}
+        total_votes = len(test_results)
+        
+        for result in test_results:
+            winner_id = result.get("winner_id")
+            if winner_id:
+                if winner_id not in prompt_wins:
+                    prompt_wins[winner_id] = 0
+                prompt_wins[winner_id] += 1
+        
+        # 获取prompt详情
+        prompt_details = {}
+        for prompt_id, wins in prompt_wins.items():
+            prompt = self.prompt_storage.get(prompt_id)
+            if prompt:
+                prompt_details[prompt_id] = {
+                    "content": prompt.get("content"),
+                    "category": prompt.get("category"),
+                    "wins": wins,
+                    "win_rate": wins / total_votes
+                }
+        
+        # 生成分析报告
+        analysis = {
+            "test_session_id": test_session_id,
+            "total_tests": total_votes,
+            "prompt_performance": prompt_details,
+            "recommendations": self._generate_recommendations(prompt_details)
+        }
+        
+        return analysis
+    
+    def _generate_recommendations(self, prompt_details: Dict[str, Any]) -> List[str]:
+        # 生成优化建议
+        recommendations = []
+        
+        # 分析最佳prompt的特点
+        if prompt_details:
+            best_prompt_id = max(prompt_details, key=lambda x: prompt_details[x]["win_rate"])
+            best_prompt = prompt_details[best_prompt_id]
+            
+            recommendations.append(f"最佳Prompt: {best_prompt['content']}")
+            recommendations.append(f"胜率: {best_prompt['win_rate']:.2f}")
+            recommendations.append("建议分析该Prompt的结构和用词，应用到其他Prompt中")
+        
+        return recommendations
+```
+
+#### 4.2.5 Prompt服务（支持一键生成）
+
+```python
+# services/prompt.py
+from datetime import datetime
+from typing import List, Dict, Any
+from app.storage.prompt import PromptStorage
+from app.schemas.prompt import PromptCreate
+
+class PromptService:
+    def __init__(self):
+        self.prompt_storage = PromptStorage()
+    
+    def create(self, prompt_data: PromptCreate, author_id: str) -> Dict[str, Any]:
+        # 创建新prompt
+        prompt = self.prompt_storage.create({
+            "content": prompt_data.content,
+            "category": prompt_data.category,
+            "tags": prompt_data.tags,
+            "author_id": author_id,
+            "created_at": datetime.utcnow().isoformat()
+        })
+        return prompt
+    
+    def list(self, category: str = None, tags: List[str] = None) -> List[Dict[str, Any]]:
+        # 获取prompt列表
+        if category:
+            return self.prompt_storage.get_by_category(category)
+        elif tags:
+            return self.prompt_storage.get_by_tags(tags)
+        else:
+            return self.prompt_storage.list()
+    
+    def get(self, prompt_id: str) -> Dict[str, Any]:
+        # 获取单个prompt
+        return self.prompt_storage.get(prompt_id)
+    
+    def generate(self, category: str, purpose: str) -> Dict[str, Any]:
+        # 一键生成prompt
+        # 这里可以集成AI模型来生成prompt
+        # 暂时使用模板生成
+        templates = {
+            "general": "请详细描述{purpose}，提供具体的步骤和示例。",
+            "coding": "请编写{purpose}的代码，包括详细的注释和使用示例。",
+            "creative": "请创作{purpose}，要求内容新颖，有创意。",
+            "analytical": "请分析{purpose}，提供数据支持和深入见解。"
+        }
+        
+        template = templates.get(category, templates["general"])
+        generated_content = template.format(purpose=purpose)
+        
+        # 存储生成的prompt
+        prompt = self.prompt_storage.create({
+            "content": generated_content,
+            "category": category,
+            "tags": [category, "generated"],
+            "author_id": "system",
+            "created_at": datetime.utcnow().isoformat()
+        })
+        
+        return prompt
 ```
 
 ### 4.3 API设计
@@ -612,7 +720,7 @@ def get_profile(current_user: User = Depends(get_current_user)):
 
 ```python
 # api/prompt.py
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List
 from app.services.prompt import PromptService
 from app.schemas.prompt import PromptCreate, Prompt, PromptListParams
@@ -626,6 +734,18 @@ prompt_service = PromptService()
 def upload_prompt(prompt_data: PromptCreate, current_user: User = Depends(get_current_user)):
     try:
         prompt = prompt_service.create(prompt_data, current_user.id)
+        return prompt
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/generate", response_model=Prompt)
+def generate_prompt(
+    category: str = Query(..., description="Prompt category"),
+    purpose: str = Query(..., description="Prompt purpose"),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        prompt = prompt_service.generate(category, purpose)
         return prompt
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -677,6 +797,14 @@ def submit_vote(vote_data: VoteCreate, current_user: User = Depends(get_current_
 def get_results(current_user: User = Depends(get_current_user)):
     tests = test_service.get_user_tests(current_user.id)
     return tests
+
+@router.get("/results/{session_id}", response_model=List[dict])
+def get_test_session_results(session_id: str, current_user: User = Depends(get_current_user)):
+    try:
+        results = test_service.get_test_results(session_id)
+        return results
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 ```
 
 #### 4.3.4 排行榜API
@@ -698,6 +826,31 @@ def get_leaderboard(
 ):
     leaderboard = leaderboard_service.get_leaderboard(category, sort_by)
     return leaderboard
+```
+
+#### 4.3.5 AI API
+
+```python
+# api/ai.py
+from fastapi import APIRouter, Depends, HTTPException
+from typing import Dict, Any
+from app.services.ai import AIService
+from app.api.auth import get_current_user
+from app.schemas.user import User
+
+router = APIRouter(prefix="/ai", tags=["ai"])
+ai_service = AIService()
+
+@router.get("/analyze", response_model=Dict[str, Any])
+def analyze_test_results(
+    test_session_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        analysis = ai_service.analyze_test_results(test_session_id, current_user.id)
+        return analysis
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 ```
 
 ## 5. 数据模型设计
@@ -836,6 +989,27 @@ class LeaderboardItem(BaseModel):
         from_attributes = True
 ```
 
+### 5.6 AI模型
+
+```python
+# models/ai.py
+from pydantic import BaseModel
+from typing import List, Dict, Any
+
+class AnalysisRequest(BaseModel):
+    test_session_id: str
+
+class AnalysisResult(BaseModel):
+    test_session_id: str
+    total_tests: int
+    prompt_performance: Dict[str, Any]
+    recommendations: List[str]
+
+class PromptGenerateRequest(BaseModel):
+    category: str
+    purpose: str
+```
+
 ## 6. 部署与配置
 
 ### 6.1 前端部署
@@ -845,12 +1019,10 @@ class LeaderboardItem(BaseModel):
    cd frontend
    npm install
    ```
-
 2. **构建静态文件**：
    ```bash
    npm run build
    ```
-
 3. **部署静态文件**：
    - 将 `dist` 目录部署到静态文件服务器
    - 配置服务器支持SPA路由（ fallback到index.html）
@@ -863,21 +1035,17 @@ class LeaderboardItem(BaseModel):
    python3 -m venv venv
    source venv/bin/activate
    ```
-
 2. **安装依赖**：
    ```bash
    pip install -r requirements.txt
    ```
-
 3. **配置环境变量**：
    - 创建 `.env` 文件
    - 设置 `SECRET_KEY` 等配置
-
 4. **创建数据目录**：
    ```bash
    mkdir -p data/users data/prompts data/test_sessions data/test_results data/votes
    ```
-
 5. **运行应用**：
    ```bash
    uvicorn app.main:app --host 0.0.0.0 --port 8000
@@ -910,7 +1078,6 @@ settings = Settings()
   ```bash
   npm test
   ```
-
 - **端到端测试**：测试完整流程
   ```bash
   npm run e2e
@@ -922,7 +1089,6 @@ settings = Settings()
   ```bash
   pytest
   ```
-
 - **API测试**：测试API接口
   ```bash
   pytest tests/api
@@ -976,13 +1142,16 @@ settings = Settings()
 
 ## 10. 技术挑战与解决方案
 
-| 挑战 | 解决方案 |
-|------|----------|
-| 文件系统并发操作 | 实现文件锁机制，确保操作原子性 |
-| 数据一致性 | 事务性操作，确保数据完整 |
-| 性能优化 | 缓存机制，减少文件IO操作 |
-| 扩展性 | 模块化设计，支持功能扩展 |
-| 安全性 | 加密存储，权限控制 |
+| 挑战         | 解决方案                      |
+| ---------- | ------------------------- |
+| 文件系统并发操作   | 实现文件锁机制，确保操作原子性           |
+| 数据一致性      | 事务性操作，确保数据完整              |
+| 性能优化       | 缓存机制，减少文件IO操作             |
+| 扩展性        | 模块化设计，支持功能扩展              |
+| 安全性        | 加密存储，权限控制                 |
+| AI模型集成     | 使用轻量级AI模型，确保响应速度          |
+| Prompt生成质量 | 结合模板和AI技术，提高生成质量          |
+| 测试结果分析     | 设计有效的分析算法，提供有价值的 insights |
 
 ## 11. 未来扩展
 
