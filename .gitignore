@@ -3,6 +3,10 @@ node_modules/
 venv/
 env/
 
+# Package lock files
+package-lock.json
+
+
 # Build outputs
 dist/
 build/
