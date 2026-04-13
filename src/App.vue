@@ -237,7 +237,7 @@ export default {
           description: '比较两组提示词在客服安抚回复中的可读性、同理心表达、规则解释与补偿建议完整度。',
           promptA: '你是一名资深客服专家，请输出安抚式回复，先表达理解，再说明平台规则，最后给出可执行的补偿建议，整体语气温和、稳定、清晰。',
           promptB: '请作为高情商客服生成回复：先共情，再说明价格变动或流程机制，最后给出一到两种明确处理路径，并强调继续协助。',
-          status: 'unpublished',
+          testData: '测试数据xxx',
           questionLimit: 49,
           createdBy: 'admin01',
           items: [
@@ -283,6 +283,7 @@ export default {
           description: '比较两组提示词在客服安抚回复中的可读性、同理心表达、规则解释与补偿建议完整度。',
           promptA: '你是一名资深客服专家，请输出安抚式回复，先表达理解，再说明平台规则，最后给出可执行的补偿建议，整体语气温和、稳定、清晰。',
           promptB: '请作为高情商客服生成回复：先共情，再说明价格变动或流程机制，最后给出一到两种明确处理路径，并强调继续协助。',
+          testData: '测试数据xxx',
           status: 'unpublished',
           questionLimit: 49,
           createdBy: 'admin01',
@@ -590,14 +591,38 @@ export default {
               timestamp: new Date(),
               details: {
                 answeredCount: validAnswers.length,
-                questions: validQuestions.map(q => ({
-                  id: q.id,
-                  originalQuestion: validUserInputs[q.id] || '',
-                  answerA: q.answerA,
-                  answerB: q.answerB,
-                  selectedAnswer: validAnswers.find(a => a.itemId === q.id) ? (validAnswers.find(a => a.itemId === q.id).selectedPrompt === 'prompt_a' ? 'A' : 'B') : null,
-                  modelJudge: modelJudgeAnswers[q.id] || null
-                }))
+                questions: validQuestions.map(q => {
+                  const answer = validAnswers.find(a => a.itemId === q.id)
+                  let selectedAnswer = null
+                  let selectedPrompt = null
+                  
+                  if (answer) {
+                    // 获取用户选择的回答（A或B）
+                    selectedAnswer = answer.selectedPrompt === 'prompt_a' ? 'A' : 'B'
+                    
+                    // 根据promptMapping确定实际选择的prompt
+                    if (q.promptMapping) {
+                      if (selectedAnswer === 'A') {
+                        selectedPrompt = q.promptMapping.a
+                      } else {
+                        selectedPrompt = q.promptMapping.b
+                      }
+                    } else {
+                      // 如果没有promptMapping，使用默认映射
+                      selectedPrompt = answer.selectedPrompt
+                    }
+                  }
+                  
+                  return {
+                    id: q.id,
+                    originalQuestion: validUserInputs[q.id] || '',
+                    answerA: q.answerA,
+                    answerB: q.answerB,
+                    selectedAnswer: selectedAnswer,
+                    selectedPrompt: selectedPrompt,
+                    modelJudge: modelJudgeAnswers[q.id] || null
+                  }
+                })
               }
             })
             

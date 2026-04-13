@@ -155,7 +155,8 @@ export default {
       isGenerating: false,
       modelJudgeAnswers: {},
       isJudging: false,
-      testDataInitialized: false
+      testDataInitialized: false,
+      promptMappings: {} // 存储每个问题的prompt映射关系
     }
   },
   computed: {
@@ -334,21 +335,50 @@ export default {
       setTimeout(() => {
         // 模拟生成回答
         if (this.currentQuestion) {
-          // 生成模拟回答A和B
-          const mockAnswerA = `这是针对问题"${this.userInput}"的回答A，使用了Prompt A的指令。`
-          const mockAnswerB = `这是针对问题"${this.userInput}"的回答B，使用了Prompt B的指令。`
+          // 随机分配prompt a和b到回答A和B
+          const isPromptARandom = Math.random() > 0.5
+          const promptMapping = {
+            a: isPromptARandom ? 'prompt_a' : 'prompt_b',
+            b: isPromptARandom ? 'prompt_b' : 'prompt_a'
+          }
+          
+          // 保存映射关系
+          this.$set(this.promptMappings, this.currentQuestion.id, promptMapping)
+          
+          // 调用API方法（预留）
+          const answers = this.callGenerateAPI(this.userInput, this.currentTestData, promptMapping)
           
           // 保存生成的回答到当前问题对象
-          this.currentQuestion.answerA = mockAnswerA
-          this.currentQuestion.answerB = mockAnswerB
+          this.currentQuestion.answerA = answers.a
+          this.currentQuestion.answerB = answers.b
+          
+          // 保存映射关系到问题对象，以便后续保存
+          this.currentQuestion.promptMapping = promptMapping
           
           console.log('Generated answers saved to currentQuestion:', this.currentQuestion)
+          console.log('Prompt mapping:', promptMapping)
         }
         
         // 显示答案
         this.showAnswers = true
         this.isGenerating = false
       }, 1500)
+    },
+    callGenerateAPI(question, testData, promptMapping) {
+      // 预留API调用方法
+      // 实际项目中这里会调用真实的API接口
+      // 参数：原始问题、测试数据、prompt映射关系
+      console.log('Calling generate API with:', {
+        question,
+        testData,
+        promptMapping
+      })
+      
+      // 返回模拟结果
+      return {
+        a: `这是针对问题"${question}"的回答A，使用了${promptMapping.a === 'prompt_a' ? 'Prompt A' : 'Prompt B'}的指令。`,
+        b: `这是针对问题"${question}"的回答B，使用了${promptMapping.b === 'prompt_a' ? 'Prompt A' : 'Prompt B'}的指令。`
+      }
     },
     generateJudgeAnswer() {
       if (!this.currentQuestion) return

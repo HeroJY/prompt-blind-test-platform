@@ -72,6 +72,19 @@
               </div>
             </div>
           </div>
+          
+          <!-- Prompt 内容展示 -->
+          <div class="prompt-content-grid" style="margin-top: 24px;">
+            <h3 style="grid-column: 1 / -1; margin-bottom: 16px;">Prompt 内容</h3>
+            <div class="prompt-card prompt-card-a">
+              <h4 style="margin-top: 0; margin-bottom: 12px; color: #2563eb;">Prompt A</h4>
+              <pre style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; padding: 16px; background-color: #f0f9ff; border-radius: 8px; font-family: monospace; margin: 0;">{{ currentTaskStats?.promptA }}</pre>
+            </div>
+            <div class="prompt-card prompt-card-b">
+              <h4 style="margin-top: 0; margin-bottom: 12px; color: #db2777;">Prompt B</h4>
+              <pre style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; padding: 16px; background-color: #fef2f2; border-radius: 8px; font-family: monospace; margin: 0;">{{ currentTaskStats?.promptB }}</pre>
+            </div>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn primary" @click="closeStatsModal">关闭</button>
@@ -150,9 +163,9 @@ export default {
       this.historyOperations.forEach(op => {
         if (op.taskId === task.id && op.type === 'session_completed' && op.userId === this.currentUser.username) {
           op.details.questions.forEach(q => {
-            if (q.selectedAnswer === 'A') {
+            if (q.selectedPrompt === 'prompt_a') {
               promptASelections++
-            } else if (q.selectedAnswer === 'B') {
+            } else if (q.selectedPrompt === 'prompt_b') {
               promptBSelections++
             }
           })
@@ -184,6 +197,8 @@ export default {
       // 保存统计数据
       this.currentTaskStats = {
         taskName: task.name,
+        promptA: task.promptA,
+        promptB: task.promptB,
         promptASelections,
         promptBSelections,
         totalSelections,
@@ -350,11 +365,34 @@ export default {
   background-color: #db2777;
 }
 
+/* Prompt 内容网格布局 */
+.prompt-content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
 
+.prompt-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.prompt-card-a {
+  border-left: 4px solid #2563eb;
+}
+
+.prompt-card-b {
+  border-left: 4px solid #db2777;
+}
 
 /* 响应式调整 */
 @media (max-width: 768px) {
   .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .prompt-content-grid {
     grid-template-columns: 1fr;
   }
   
