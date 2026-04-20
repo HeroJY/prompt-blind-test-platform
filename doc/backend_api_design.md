@@ -1,58 +1,57 @@
 # Prompt盲选测试平台后端设计文档
 
-## 1. 文档目标
+## 1. 文档说明
 
-本文档基于当前前端原型整理后端接口与代码结构，重点响应以下约束：
+本文档基于当前仓库中的实际代码整理，目标是准确描述当前后端实现，而不是描述理想规划版本。
 
-1. 系统仅自用，第一版不做完整认证体系
-2. 所有后端接口统一设计为 `POST`
-3. 文件上传当前只开放 Excel 上传
-4. ZIP 导入功能只预留，不对外开放
-5. 后端基于 Python 3.6 开发
-6. 后端代码放到一个新的独立目录中
+当前代码目录：
 
-## 2. 当前后端设计结论
+```text
+prompt-blind-test-platform/
+├── web/         # 前端
+└── python-app/  # 后端
+```
 
-### 2.1 认证策略
+其中：
 
-第一版不单独提供认证接口，不引入 JWT、不做登录态校验。
+1. 前端路径为 `prompt-blind-test-platform/web`
+2. 后端路径为 `prompt-blind-test-platform/python-app`
+3. 当前最稳定的后端运行入口是 `python-app/simple_server.py`
 
-原因：
+---
 
-1. 项目仅自用
-2. 当前前端登录页更多是角色切换和页面流程入口
-3. 第一版更重要的是先打通任务、盲测、统计闭环
+## 2. 当前系统边界
 
-因此建议采用“轻量操作者信息”方案：
+### 2.1 登录与认证
 
-1. 前端在每个请求体里附带操作者信息
-2. 后端只做最基础的角色判断，不做 token 校验
+当前系统保留“伪登录”，不做真实认证。
 
-请求体中统一增加：
+实际行为：
+
+1. 前端登录页只负责角色切换与进入系统
+2. 用户名和密码不会提交到后端校验
+3. 后端没有 `/auth/login`、JWT、Session、Cookie 等认证机制
+4. 所有业务接口都通过请求体中的 `operator` 标识当前操作者
+
+统一结构：
 
 ```json
 {
   "operator": {
-    "username": "admin01",
-    "role": "admin"
+    "username": "tester01",
+    "role": "tester"
   }
 }
 ```
 
 说明：
 
-1. `operator` 只用于审计、记录创建人、做最基础权限判断
-2. 后续如果要升级为正式系统，再把这部分替换成 JWT 即可
+1. `operator` 当前只用于记录创建人和做最基础的角色判断
+2. 如果后续要升级为正式系统，可以在保留业务接口不变的前提下增加认证层
 
-### 2.2 接口风格
+### 2.2 接口设计风格
 
-所有接口统一为 `POST`。
-
-这样做的好处是：
-
-1. 前端调用方式统一
-2. 查询条件、筛选条件、操作者信息都可以统一放在 body 里
-3. 对当前原型开发更省事
+当前所有业务接口统一使用 `POST`。
 
 统一前缀：
 
@@ -68,92 +67,61 @@
 }
 ```
 
-错误响应建议：
+错误示例：
 
 ```json
 {
-  "code": 4001,
+  "code": 4004,
   "message": "task not found",
   "data": null
 }
 ```
 
-### 2.3 上传策略
+### 2.3 运行环境
 
-当前仅开放 Excel 上传，不开放 ZIP。
+当前运行目标是 Python 3.6.10。
 
-开放：
+代码中保留了两套入口：
 
-1. Prompt Excel 上传
-2. 题目 Excel 上传
-3. 测试数据 Excel 上传
+1. `simple_server.py`
+   使用 Python 标准库实现，可直接运行
+2. `app/main.py`
+   保留 FastAPI 风格入口，便于后续升级
 
-预留但不开放：
+当前推荐运行方式：
 
-1. ZIP 导入包上传
+```bash
+/Users/shala/opt/anaconda3/envs/python36/bin/python simple_server.py
+```
 
-建议规则：
+---
 
-1. 当前只正式支持 `.xlsx`
-2. `.xls` 暂不支持，避免额外引入旧版解析依赖
-3. ZIP 接口保留路由名，但统一返回“功能未开放”
-
-### 2.4 Python 3.6 兼容性
-
-后端运行环境固定为 Python 3.6，因此依赖版本需要保守选择。
-
-建议依赖版本：
-
-1. `fastapi==0.78.0`
-2. `uvicorn==0.16.0`
-3. `python-multipart==0.0.5`
-4. `openpyxl==3.0.10`
-
-说明：
-
-1. 根据 PyPI 页面，`fastapi 0.78.0` 支持 Python 3.6+
-2. 根据 Uvicorn PyPI 页面提示，Python 3.6 需使用 `0.16.0`
-3. `openpyxl 3.0.10` 可用于 `.xlsx` 读取
-
-## 3. 后端目录规划
-
-新建后端目录：
-
-`prompt-blind-test-backend`
-
-建议结构：
+## 3. 当前后端目录结构
 
 ```text
-prompt-blind-test-backend/
+python-app/
 ├── README.md
 ├── requirements.txt
+├── simple_server.py
+├── smoke_test.py
 ├── app/
-│   ├── __init__.py
 │   ├── main.py
 │   ├── config.py
 │   ├── core/
-│   │   ├── __init__.py
-│   │   └── response.py
 │   ├── api/
-│   │   ├── __init__.py
-│   │   ├── system.py
-│   │   ├── tasks.py
-│   │   ├── sessions.py
-│   │   ├── uploads.py
-│   │   ├── stats.py
-│   │   └── ai.py
 │   └── services/
-│       ├── __init__.py
-│       └── excel_parser.py
 └── data/
-    └── README.md
+    ├── tasks.json
+    └── sessions.json
 ```
 
 说明：
 
-1. `app/api/` 放路由
-2. `app/services/` 放 Excel 解析、统计、会话逻辑
-3. `data/` 放 JSON 文件数据
+1. `simple_server.py` 是当前实际联调使用的入口
+2. `app/services/` 中保存任务、会话、存储、Excel 解析等核心逻辑
+3. `data/tasks.json` 与 `data/sessions.json` 是当前真实数据源
+
+---
 
 ## 4. 核心数据模型
 
@@ -168,132 +136,146 @@ prompt-blind-test-backend/
 
 ### 4.2 Task
 
+当前任务对象使用 camelCase 字段，真实结构如下：
+
 ```json
 {
   "id": 1,
   "name": "客服回复质量对比（V3 vs V4）",
-  "description": "比较两组提示词在客服安抚回复中的表现差异",
+  "description": "比较两组提示词在客服安抚回复中的可读性、同理心表达、规则解释与补偿建议完整度。",
+  "promptA": "你是一名资深客服专家，请输出安抚式回复......",
+  "promptB": "请作为高情商客服生成回复......",
+  "promptAImages": [
+    {
+      "name": "prompt-a-1.png",
+      "type": "image/png",
+      "url": "/uploads/prompts/task_1/prompt_a/abc123.png"
+    }
+  ],
+  "promptBImages": [],
+  "testData": "order_id=123456\nproduct_name=手机壳",
   "status": "published",
   "visibility": "public",
-  "question_limit": 49,
-  "created_by": "admin01",
-  "prompt_a_text": "......",
-  "prompt_b_text": "......",
-  "test_data_text": "......",
-  "item_count": 12,
-  "session_count": 35,
-  "created_at": "2026-04-19T10:00:00+08:00",
-  "updated_at": "2026-04-19T12:00:00+08:00"
+  "questionLimit": 49,
+  "createdBy": "admin01",
+  "createdAt": "2026-04-19T10:00:00+08:00",
+  "updatedAt": "2026-04-19T10:00:00+08:00",
+  "items": []
 }
 ```
 
-字段建议：
+字段说明：
 
-1. `status`: `draft | unpublished | published`
-2. `visibility`: `public | private`
+1. `promptA`、`promptB` 是文字 Prompt
+2. `promptAImages`、`promptBImages` 是 Prompt 图片
+3. Prompt 图片当前实际保存为本地文件，`tasks.json` 中只保留图片元数据与访问 URL
+4. `visibility` 当前支持 `public` 和 `private`
+5. `status` 当前主要使用 `draft` 和 `published`
 
 ### 4.3 TaskItem
 
 ```json
 {
   "id": 101,
-  "task_id": 1,
   "code": "Q001",
-  "source_type": "text",
-  "source_text": "用户投诉昨天买的商品今天降价了......",
-  "images": [],
-  "sort_order": 1
+  "sourceType": "text",
+  "sortOrder": 1,
+  "sourceText": "用户投诉昨天买的商品今天降价了......",
+  "images": []
 }
 ```
+
+说明：
+
+1. 当前题目以文本题为主
+2. `images` 字段已保留，但当前批量导入不开放图片题
 
 ### 4.4 Session
 
 ```json
 {
-  "id": "s_20260419_0001",
-  "task_id": 1,
-  "username": "tester01",
+  "id": "s_1776617768207",
+  "taskId": 1,
+  "userId": "tester01",
   "status": "in_progress",
-  "question_limit": 49,
-  "answered_count": 3,
-  "start_time": "2026-04-19T14:00:00+08:00",
-  "end_time": null
+  "answeredCount": 0,
+  "answers": [],
+  "userInputs": {},
+  "testDataByQuestion": {},
+  "questions": [],
+  "startTime": "2026-04-20T10:00:00",
+  "endTime": null
 }
 ```
 
-### 4.5 SessionQuestionRecord
+### 4.5 Session Question
+
+每道题的生成结果、投票结果、裁判结果都保存在 `session.questions` 中：
 
 ```json
 {
-  "id": "sq_001",
-  "session_id": "s_20260419_0001",
-  "slot_index": 1,
-  "task_item_id": 101,
-  "original_question": "请生成客服安抚回复",
-  "test_data": "订单号xxx，商品xxx",
-  "candidate_a": "......",
-  "candidate_b": "......",
-  "selected_option": "A",
-  "actual_selected_prompt": "prompt_a",
-  "judge_result": {
-    "recommended_option": "B",
+  "id": 101,
+  "code": "Q001",
+  "sourceType": "text",
+  "sortOrder": 1,
+  "sourceText": "请生成客服安抚回复",
+  "images": [],
+  "answerA": "......",
+  "answerB": "......",
+  "questionRecordId": "sq_s_1776617768207_1",
+  "promptMapping": {
+    "a": "prompt_a",
+    "b": "prompt_b"
+  },
+  "modelJudge": {
+    "recommended": "A",
     "reason": "......"
-  }
+  },
+  "testData": "order_id=9988"
 }
 ```
 
 关键约束：
 
-1. 前端只能拿到 `candidate_a` 和 `candidate_b`
-2. `actual_selected_prompt` 只能由后端保存
-3. 统计必须按真实 Prompt 归因
+1. 前端只看到候选回答 A / B
+2. A/B 与真实 Prompt A/B 的映射只保存在后端
+3. 统计结果必须按 `selectedPrompt` 做真实归因
 
-## 5. Excel 上传设计
+---
 
-### 5.1 Prompt Excel 上传
+## 5. Prompt、上传与导入策略
 
-接口：
+### 5.1 Prompt 配置方式
 
-`POST /api/v1/upload/prompt_excel`
+当前前端主流程中，Prompt 配置方式已经不是 Excel 导入，而是：
 
-用途：
+1. 手动输入 Prompt A 文字
+2. 手动输入 Prompt B 文字
+3. 分别上传 Prompt A / Prompt B 图片
 
-1. 上传任务 Prompt 配置
-2. 解析出 Prompt A 和 Prompt B
+当前 Prompt 的能力边界：
 
-推荐 Excel 模板：
+1. 图片 Prompt 可以保存与展示
+2. 图片 Prompt 当前不会被真正解析为多模态输入
+3. 如果 Prompt 只有图片、没有文字，后端生成逻辑会使用“图像提示词，共 N 张”作为兜底说明
+4. Prompt 图片会写入本地目录 `python-app/data/uploads/prompts/`
 
-| task_name | task_description | prompt_a | prompt_b |
-| ---- | ---- | ---- | ---- |
-| 客服回复质量对比 | 比较两组提示词效果 | 这里是 Prompt A | 这里是 Prompt B |
+### 5.2 Excel 上传策略
 
-响应示例：
+当前正式开放的 Excel 上传能力有两类：
 
-```json
-{
-  "code": 0,
-  "message": "ok",
-  "data": {
-    "task_name": "客服回复质量对比",
-    "task_description": "比较两组提示词效果",
-    "prompt_a_text": "这里是 Prompt A",
-    "prompt_b_text": "这里是 Prompt B"
-  }
-}
-```
+1. `POST /api/v1/upload/item_excel`
+2. `POST /api/v1/upload/test_data_excel`
 
-### 5.2 题目 Excel 上传
+规则：
 
-接口：
+1. 当前只支持 `.xlsx`
+2. `.xls` 暂不支持
+3. ZIP 路由保留但不开放
 
-`POST /api/v1/upload/item_excel`
+### 5.3 题目 Excel 模板
 
-用途：
-
-1. 批量导入题目
-2. 替代当前原型里 ZIP 导入的开放能力
-
-推荐 Excel 模板：
+推荐字段：
 
 | code | sort_order | source_type | source_text |
 | ---- | ---- | ---- | ---- |
@@ -302,41 +284,12 @@ prompt-blind-test-backend/
 
 说明：
 
-1. 第一版只支持 `source_type=text`
-2. 图片题先保留字段，不在第一版开放
+1. 当前只建议使用 `source_type=text`
+2. 图片题批量导入暂不开放
 
-响应示例：
+### 5.4 测试数据 Excel 模板
 
-```json
-{
-  "code": 0,
-  "message": "ok",
-  "data": {
-    "item_count": 2,
-    "items": [
-      {
-        "code": "Q001",
-        "sort_order": 1,
-        "source_type": "text",
-        "source_text": "用户投诉昨天买的商品今天降价了"
-      }
-    ]
-  }
-}
-```
-
-### 5.3 测试数据 Excel 上传
-
-接口：
-
-`POST /api/v1/upload/test_data_excel`
-
-用途：
-
-1. 上传测试数据
-2. 供会话生成时补充上下文
-
-推荐 Excel 模板：
+推荐字段：
 
 | data_key | data_value |
 | ---- | ---- |
@@ -344,48 +297,15 @@ prompt-blind-test-backend/
 | product_name | 手机壳 |
 | complaint_reason | 昨天下单今天降价 |
 
-响应示例：
+---
 
-```json
-{
-  "code": 0,
-  "message": "ok",
-  "data": {
-    "row_count": 3,
-    "preview_text": "order_id=123456\nproduct_name=手机壳\ncomplaint_reason=昨天下单今天降价"
-  }
-}
-```
-
-### 5.4 ZIP 上传预留
-
-接口预留：
-
-`POST /api/v1/upload/task_zip`
-
-当前策略：
-
-1. 路由预留
-2. 返回“功能未开放”
-3. 前端先不要接入
-
-返回示例：
-
-```json
-{
-  "code": 4003,
-  "message": "zip upload is not enabled yet",
-  "data": null
-}
-```
-
-## 6. POST 接口清单
+## 6. 当前已实现接口
 
 ### 6.1 系统接口
 
 | 方法 | 路径 | 用途 |
 | ---- | ---- | ---- |
-| POST | `/api/v1/system/ping` | 服务连通性检查 |
+| POST | `/api/v1/system/ping` | 服务探活 |
 
 ### 6.2 任务接口
 
@@ -404,18 +324,21 @@ prompt-blind-test-backend/
 | ---- | ---- | ---- |
 | POST | `/api/v1/task/item/list` | 获取题目列表 |
 | POST | `/api/v1/task/item/create` | 新增单题 |
-| POST | `/api/v1/task/item/update` | 修改单题 |
 | POST | `/api/v1/task/item/delete` | 删除单题 |
-| POST | `/api/v1/task/item/import_excel` | Excel 批量导入题目 |
+| POST | `/api/v1/task/item/import_excel` | 通过结构化数据导入题目 |
+
+说明：
+
+1. `task/item/update` 当前没有实现
+2. 前端当前也没有逐题编辑题目的流程
 
 ### 6.4 上传接口
 
 | 方法 | 路径 | 用途 |
 | ---- | ---- | ---- |
-| POST | `/api/v1/upload/prompt_excel` | 上传 Prompt Excel |
 | POST | `/api/v1/upload/item_excel` | 上传题目 Excel |
 | POST | `/api/v1/upload/test_data_excel` | 上传测试数据 Excel |
-| POST | `/api/v1/upload/task_zip` | 预留 ZIP 上传接口，暂不开放 |
+| POST | `/api/v1/upload/task_zip` | 预留 ZIP 上传接口，当前返回未开放 |
 
 ### 6.5 会话接口
 
@@ -426,8 +349,8 @@ prompt-blind-test-backend/
 | POST | `/api/v1/session/generate` | 生成候选回答 |
 | POST | `/api/v1/session/vote` | 保存投票 |
 | POST | `/api/v1/session/judge` | 大模型裁判 |
-| POST | `/api/v1/session/finish` | 正常结束任务 |
-| POST | `/api/v1/session/quit` | 中途退出并保留已答内容 |
+| POST | `/api/v1/session/finish` | 正常结束测试 |
+| POST | `/api/v1/session/quit` | 中途退出测试 |
 
 ### 6.6 历史接口
 
@@ -443,13 +366,15 @@ prompt-blind-test-backend/
 | ---- | ---- | ---- |
 | POST | `/api/v1/stats/task_overview` | 获取任务整体统计 |
 | POST | `/api/v1/stats/task_items` | 获取分题统计 |
-| POST | `/api/v1/stats/dashboard_overview` | 获取后台统计概览 |
+| POST | `/api/v1/stats/dashboard_overview` | 获取后台概览统计 |
 
 ### 6.8 AI 接口
 
 | 方法 | 路径 | 用途 |
 | ---- | ---- | ---- |
 | POST | `/api/v1/ai/prompt_generate` | 一键生成 Prompt |
+
+---
 
 ## 7. 重点接口说明
 
@@ -464,14 +389,16 @@ prompt-blind-test-backend/
   "operator": {
     "username": "tester01",
     "role": "tester"
-  },
-  "filters": {
-    "status": "published",
-    "keyword": "客服",
-    "mine": false
   }
 }
 ```
+
+当前行为：
+
+1. 测试用户可以看到已发布任务
+2. 测试用户也可以看到自己创建的私有任务
+3. 管理员可以看到全部任务
+4. 当前没有实现复杂筛选条件
 
 ### 7.2 创建任务
 
@@ -489,13 +416,21 @@ prompt-blind-test-backend/
     "name": "客服回复质量对比",
     "description": "比较两组提示词效果",
     "visibility": "public",
-    "question_limit": 49,
-    "prompt_a_text": "......",
-    "prompt_b_text": "......",
-    "test_data_text": ""
+    "questionLimit": 49,
+    "promptA": "......",
+    "promptB": "......",
+    "promptAImages": [],
+    "promptBImages": [],
+    "testData": ""
   }
 }
 ```
+
+说明：
+
+1. Prompt A / B 可以只填文字
+2. Prompt A / B 也可以只上传图片
+3. 当前前端发布前会要求 Prompt A / B 至少各有一种内容
 
 ### 7.3 开始测试
 
@@ -509,10 +444,15 @@ prompt-blind-test-backend/
     "username": "tester01",
     "role": "tester"
   },
-  "task_id": 1,
-  "question_limit": 49
+  "taskId": 1,
+  "questionLimit": 49
 }
 ```
+
+说明：
+
+1. 当前会话会按 `questionLimit` 初始化题目槽位
+2. 如果任务题目数不足，会自动补空白题槽
 
 ### 7.4 生成候选回答
 
@@ -526,11 +466,10 @@ prompt-blind-test-backend/
     "username": "tester01",
     "role": "tester"
   },
-  "session_id": "s_20260419_0001",
-  "slot_index": 1,
-  "original_question": "请生成客服安抚回复",
-  "test_data": "订单号123，用户反馈降价",
-  "force_regenerate": false
+  "sessionId": "s_1776617768207",
+  "slotIndex": 0,
+  "originalQuestion": "请生成客服安抚回复",
+  "testData": "订单号123，用户反馈降价"
 }
 ```
 
@@ -541,17 +480,19 @@ prompt-blind-test-backend/
   "code": 0,
   "message": "ok",
   "data": {
-    "question_record_id": "sq_001",
-    "candidate_a": "您好，很抱歉给您带来不好的体验......",
-    "candidate_b": "非常抱歉让您遇到这样的情况......"
+    "questionRecordId": "sq_s_1776617768207_1",
+    "candidateA": "您好，很抱歉给您带来不好的体验......",
+    "candidateB": "非常抱歉让您遇到这样的情况......"
   }
 }
 ```
 
-说明：
+当前行为：
 
-1. 后端在内部完成 Prompt A/B 到 A/B 候选回答的随机映射
-2. 前端不能拿到真实映射
+1. 后端内部随机决定候选回答 A / B 与真实 Prompt A / B 的映射关系
+2. 前端不会拿到真实映射
+3. 当前生成逻辑是本地 mock，不是真实模型调用
+4. 当前模型裁判也是本地 mock
 
 ### 7.5 保存投票
 
@@ -565,18 +506,23 @@ prompt-blind-test-backend/
     "username": "tester01",
     "role": "tester"
   },
-  "session_id": "s_20260419_0001",
-  "question_record_id": "sq_001",
-  "selected_option": "A"
+  "sessionId": "s_1776617768207",
+  "questionRecordId": "sq_s_1776617768207_1",
+  "selectedOption": "A"
 }
 ```
 
-要求：
+行为要求：
 
-1. 必须幂等
-2. 重复提交时以后一次为准
+1. 同一题重复投票以后一次为准
+2. 保存时同时记录用户选择的 `selectedOption`
+3. 后端同时保存真实归因字段 `selectedPrompt`
 
-## 8. 文件存储建议
+---
+
+## 8. 文件存储设计
+
+当前真实结构：
 
 ```text
 data/
@@ -585,46 +531,57 @@ data/
 └── uploads/
 ```
 
-当前 MVP 实现：
+当前实现说明：
 
-1. `tasks.json` 保存任务主信息与题目列表
-2. `sessions.json` 保存会话明细、投票、裁判结果和真实映射
-3. `uploads/` 预留为上传文件目录
+1. `tasks.json` 保存任务主信息、Prompt 文字、Prompt 图片、题目列表
+2. `sessions.json` 保存会话、作答、裁判结果与真实 Prompt 映射
+3. `uploads/` 目录当前用于保存 Prompt 图片本地文件
 
-如果后续数据量变大，再拆分为：
+当前方案优点：
 
-1. `tasks/` 保存任务主信息
-2. `task_items/` 保存题目列表
-3. `sessions/` 保存会话明细、投票、裁判结果和真实映射
-4. `stats/` 保存统计缓存
-5. `uploads/` 保存上传过的 Excel 原文件
+1. 简单
+2. 适合本地原型联调
+3. 搬迁项目时只需要带走源码和 JSON 文件
 
-## 9. MVP 开发建议
+当前方案限制：
 
-第一阶段先做以下最小闭环：
+1. Prompt 图片实际保存在本地目录 `data/uploads/prompts/`
+2. `tasks.json` 中保存的是图片元数据和 `/uploads/...` 访问路径
+3. Prompt 图片不走 JSON 内嵌存储，只能走本地文件路径
+4. 后续正式化时建议拆为对象存储或独立文件服务
 
-1. `POST /api/v1/task/list`
-2. `POST /api/v1/task/create`
-3. `POST /api/v1/task/detail`
-4. `POST /api/v1/task/update`
-5. `POST /api/v1/task/item/create`
-6. `POST /api/v1/task/item/import_excel`
-7. `POST /api/v1/session/start`
-8. `POST /api/v1/session/generate`
-9. `POST /api/v1/session/vote`
-10. `POST /api/v1/stats/task_overview`
-11. `POST /api/v1/ai/prompt_generate`
+---
 
-第二阶段再补：
+## 9. 当前前后端分工
 
-1. `session/judge`
-2. `history/*`
-3. `upload/task_zip`
+### 9.1 已显式走后端的主流程
 
-## 10. 实现注意点
+1. 任务列表加载
+2. 任务创建、保存、发布、删除
+3. 单题新增、删除
+4. 题目 Excel 导入
+5. 测试数据 Excel 导入
+6. 开始测试、生成回答、投票、裁判、结束测试
+7. 历史记录删除
+8. 任务统计与分题统计
+9. Prompt 一键生成
 
-1. 由于不做认证，所有请求都要做基础参数校验，避免缺少 `operator`
-2. 因为全部使用 `POST`，接口命名要足够清晰，避免语义混乱
-3. Excel 上传第一版只支持 `.xlsx`
-4. ZIP 路由保留，但必须明确返回“未开放”
-5. Python 3.6 下不要使用新语法，例如 `list[str]`、`|` 联合类型、`match-case`
+### 9.2 仍保留前端本地处理的部分
+
+1. 伪登录
+2. 页面导航与返回
+3. 临时任务草稿态
+4. Prompt 图片的本地读取与预览
+
+---
+
+## 10. 当前实现注意点
+
+1. 当前不是生产级认证方案
+2. 当前所有接口都使用 camelCase 字段
+3. 批量导入题目仍然只支持 `.xlsx`
+4. Prompt 主流程已经改为“文字 + 图片”，不再依赖 Prompt Excel
+5. Prompt 图片只允许保存到本地目录，不做 dataUrl 持久化兼容
+6. ZIP 路由保留，但必须返回“未开放”
+7. Prompt 图片当前只做保存与展示，不参与真实多模态推理
+8. Python 3.6 下不要使用 `list[str]`、`|` 联合类型、`match-case` 等新语法

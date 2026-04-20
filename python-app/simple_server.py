@@ -2,6 +2,8 @@
 
 import cgi
 import json
+import mimetypes
+import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from app.services.excel_parser import (
@@ -31,6 +33,7 @@ from app.services.task_service import (
     publish_task,
     update_task,
 )
+from app.services.storage import uploads_root
 
 
 HOST = "127.0.0.1"
@@ -72,6 +75,14 @@ class RequestHandler(BaseHTTPRequestHandler):
         self._set_headers(200)
         self.wfile.write(b"")
 
+    def do_GET(self):
+        if self.path.startswith("/uploads/"):
+            self.serve_upload_file()
+            return
+
+        self._set_headers(404)
+        self.wfile.write(json.dumps({"code": 4040, "message": "route not found", "data": None}).encode("utf-8"))
+
     def do_POST(self):
         try:
             status, result = self.route_request()
@@ -79,6 +90,28 @@ class RequestHandler(BaseHTTPRequestHandler):
             status, result = 500, {"code": 5000, "message": str(exc), "data": None}
         self._set_headers(status)
         self.wfile.write(json.dumps(result, ensure_ascii=False).encode("utf-8"))
+
+    def serve_upload_file(self):
+        uploads_dir = uploads_root()
+        relative_path = self.path[len("/uploads/"):]
+        local_path = os.path.abspath(os.path.join(uploads_dir, relative_path))
+
+        if not local_path.startswith(os.path.abspath(uploads_dir)):
+            self._set_headers(403)
+            self.wfile.write(b"forbidden")
+            return
+
+        if not os.path.exists(local_path) or not os.path.isfile(local_path):
+            self._set_headers(404)
+            self.wfile.write(b"not found")
+            return
+
+        content_type = mimetypes.guess_type(local_path)[0] or "application/octet-stream"
+        with open(local_path, "rb") as file_obj:
+            file_bytes = file_obj.read()
+
+        self._set_headers(200, content_type=content_type)
+        self.wfile.write(file_bytes)
 
     def route_request(self):
         path = self.path

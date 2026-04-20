@@ -80,14 +80,14 @@
               <h4 style="margin-top: 0; margin-bottom: 12px; color: #2563eb;">Prompt A</h4>
               <pre style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; padding: 16px; background-color: #f0f9ff; border-radius: 8px; font-family: monospace; margin: 0;">{{ currentTaskStats?.promptA || ((currentTaskStats?.promptAImages && currentTaskStats.promptAImages.length) ? '当前 Prompt 未填写文字，已上传图片内容。' : '') }}</pre>
               <div v-if="currentTaskStats?.promptAImages && currentTaskStats.promptAImages.length" class="prompt-image-grid">
-                <img v-for="(image, index) in currentTaskStats.promptAImages" :key="`stats-a-${index}`" :src="image.dataUrl" :alt="image.name || `Prompt A ${index + 1}`" class="prompt-image-preview" />
+                <img v-for="(image, index) in currentTaskStats.promptAImages" :key="`stats-a-${index}`" :src="imageSrc(image)" :alt="image.name || `Prompt A ${index + 1}`" class="prompt-image-preview" />
               </div>
             </div>
             <div class="prompt-card prompt-card-b">
               <h4 style="margin-top: 0; margin-bottom: 12px; color: #db2777;">Prompt B</h4>
               <pre style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; padding: 16px; background-color: #fef2f2; border-radius: 8px; font-family: monospace; margin: 0;">{{ currentTaskStats?.promptB || ((currentTaskStats?.promptBImages && currentTaskStats.promptBImages.length) ? '当前 Prompt 未填写文字，已上传图片内容。' : '') }}</pre>
               <div v-if="currentTaskStats?.promptBImages && currentTaskStats.promptBImages.length" class="prompt-image-grid">
-                <img v-for="(image, index) in currentTaskStats.promptBImages" :key="`stats-b-${index}`" :src="image.dataUrl" :alt="image.name || `Prompt B ${index + 1}`" class="prompt-image-preview" />
+                <img v-for="(image, index) in currentTaskStats.promptBImages" :key="`stats-b-${index}`" :src="imageSrc(image)" :alt="image.name || `Prompt B ${index + 1}`" class="prompt-image-preview" />
               </div>
             </div>
           </div>
@@ -103,7 +103,7 @@
 </template>
 
 <script>
-import { postJSON } from '../../api'
+import { postJSON, resolveAssetUrl } from '../../api'
 
 export default {
   name: 'TaskList',
@@ -256,6 +256,10 @@ export default {
       } finally {
         this.statsLoading = false
       }
+    },
+    imageSrc(image) {
+      if (!image) return ''
+      return resolveAssetUrl(image.dataUrl || image.url || '')
     },
     closeStatsModal() {
       this.showStatsModal = false

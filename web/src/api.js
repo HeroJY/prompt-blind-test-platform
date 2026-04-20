@@ -1,4 +1,5 @@
 const API_BASE = process.env.VUE_APP_API_BASE || 'http://127.0.0.1:8000/api/v1'
+const API_ORIGIN = API_BASE.replace(/\/api\/v1$/, '')
 
 async function parseResponse(response) {
   let data = null
@@ -44,4 +45,12 @@ export function buildOperator(currentUser) {
     username: currentUser && currentUser.username ? currentUser.username : 'tester01',
     role: currentUser && currentUser.role ? currentUser.role : 'tester'
   }
+}
+
+export function resolveAssetUrl(path) {
+  if (!path) return ''
+  if (/^(https?:)?\/\//.test(path) || path.startsWith('data:')) {
+    return path
+  }
+  return `${API_ORIGIN}${path}`
 }

@@ -6,8 +6,9 @@
 2. 优先兼容 Python 3.6.10
 3. 所有业务接口统一为 `POST`
 4. 第一版不做 JWT 认证
-5. 当前仅开放 `.xlsx` 文件上传
+5. 题目与测试数据当前仅开放 `.xlsx` 文件上传
 6. ZIP 上传接口预留但不开放
+7. Prompt 图片保存到本地目录
 
 ## 运行环境
 
@@ -66,15 +67,17 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - `app/services/`：任务、会话、Excel、JSON 存储服务
 - `data/tasks.json`：任务主数据
 - `data/sessions.json`：会话与作答数据
+- `data/uploads/prompts/`：Prompt 图片本地存储目录
 
 ## 当前已实现能力
 
 1. 系统探活接口
 2. 任务、会话、历史、统计、AI 相关的 POST 接口
-3. `.xlsx` Prompt / 题目 / 测试数据上传解析
-4. ZIP 上传禁用返回
-5. JSON 文件持久化存储
-6. 前端联调所需的基础闭环
+3. Prompt 文字配置与本地图片存储
+4. `.xlsx` 题目 / 测试数据上传解析
+5. ZIP 上传禁用返回
+6. JSON 文件持久化存储
+7. 前端联调所需的基础闭环
 
 ## 说明
 

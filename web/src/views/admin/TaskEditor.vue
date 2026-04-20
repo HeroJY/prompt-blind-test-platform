@@ -80,7 +80,7 @@
               </div>
               <div v-if="editorForm.promptAImages.length" class="prompt-image-grid">
                 <div v-for="(image, index) in editorForm.promptAImages" :key="`promptA-${index}`" class="prompt-image-card">
-                  <img :src="image.dataUrl" :alt="image.name || `Prompt A ${index + 1}`" class="prompt-image-preview" />
+                  <img :src="imageSrc(image)" :alt="image.name || `Prompt A ${index + 1}`" class="prompt-image-preview" />
                   <div class="prompt-image-name">{{ image.name || `图片 ${index + 1}` }}</div>
                   <button class="btn danger small" @click="removePromptImage('A', index)">删除</button>
                 </div>
@@ -95,7 +95,7 @@
               </div>
               <div v-if="editorForm.promptBImages.length" class="prompt-image-grid">
                 <div v-for="(image, index) in editorForm.promptBImages" :key="`promptB-${index}`" class="prompt-image-card">
-                  <img :src="image.dataUrl" :alt="image.name || `Prompt B ${index + 1}`" class="prompt-image-preview" />
+                  <img :src="imageSrc(image)" :alt="image.name || `Prompt B ${index + 1}`" class="prompt-image-preview" />
                   <div class="prompt-image-name">{{ image.name || `图片 ${index + 1}` }}</div>
                   <button class="btn danger small" @click="removePromptImage('B', index)">删除</button>
                 </div>
@@ -213,7 +213,7 @@
 </template>
 
 <script>
-import { postFile } from '../../api'
+import { postFile, resolveAssetUrl } from '../../api'
 
 export default {
   name: 'TaskEditor',
@@ -353,6 +353,10 @@ export default {
     removePromptImage(slot, index) {
       const targetKey = slot === 'A' ? 'promptAImages' : 'promptBImages'
       this.editorForm[targetKey].splice(index, 1)
+    },
+    imageSrc(image) {
+      if (!image) return ''
+      return resolveAssetUrl(image.dataUrl || image.url || '')
     },
     triggerDataUpload() {
       this.$refs.dataInput.click()

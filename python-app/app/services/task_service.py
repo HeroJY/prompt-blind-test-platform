@@ -3,7 +3,15 @@
 import copy
 from datetime import datetime
 
-from app.services.storage import load_sessions, load_tasks, next_item_id, next_task_id, save_tasks
+from app.services.storage import (
+    delete_prompt_uploads,
+    load_sessions,
+    load_tasks,
+    next_item_id,
+    next_task_id,
+    save_tasks,
+    sync_prompt_images,
+)
 
 
 def now_iso():
@@ -84,14 +92,16 @@ def get_task_detail(task_id):
 def create_task(operator, task_payload):
     tasks = load_tasks()
     task_id = next_task_id(tasks)
+    prompt_a_images = sync_prompt_images(task_id, "prompt_a", task_payload.get("promptAImages", []), [])
+    prompt_b_images = sync_prompt_images(task_id, "prompt_b", task_payload.get("promptBImages", []), [])
     new_task = {
         "id": task_id,
         "name": task_payload.get("name", ""),
         "description": task_payload.get("description", ""),
         "promptA": task_payload.get("promptA", ""),
         "promptB": task_payload.get("promptB", ""),
-        "promptAImages": copy.deepcopy(task_payload.get("promptAImages", [])),
-        "promptBImages": copy.deepcopy(task_payload.get("promptBImages", [])),
+        "promptAImages": prompt_a_images,
+        "promptBImages": prompt_b_images,
         "testData": task_payload.get("testData", ""),
         "status": task_payload.get("status", "draft"),
         "visibility": task_payload.get("visibility", "private" if operator.get("role") != "admin" else "public"),
@@ -110,12 +120,22 @@ def update_task(task_id, task_payload):
     tasks = load_tasks()
     for task in tasks:
         if task.get("id") == task_id:
+            task["promptAImages"] = sync_prompt_images(
+                task_id,
+                "prompt_a",
+                task_payload.get("promptAImages", task.get("promptAImages", [])),
+                task.get("promptAImages", []),
+            )
+            task["promptBImages"] = sync_prompt_images(
+                task_id,
+                "prompt_b",
+                task_payload.get("promptBImages", task.get("promptBImages", [])),
+                task.get("promptBImages", []),
+            )
             task["name"] = task_payload.get("name", task.get("name", ""))
             task["description"] = task_payload.get("description", task.get("description", ""))
             task["promptA"] = task_payload.get("promptA", task.get("promptA", ""))
             task["promptB"] = task_payload.get("promptB", task.get("promptB", ""))
-            task["promptAImages"] = copy.deepcopy(task_payload.get("promptAImages", task.get("promptAImages", [])))
-            task["promptBImages"] = copy.deepcopy(task_payload.get("promptBImages", task.get("promptBImages", [])))
             task["testData"] = task_payload.get("testData", task.get("testData", ""))
             task["status"] = task_payload.get("status", task.get("status", "draft"))
             task["visibility"] = task_payload.get("visibility", task.get("visibility", "private"))
@@ -133,6 +153,7 @@ def delete_task(task_id):
     new_tasks = [task for task in tasks if task.get("id") != task_id]
     deleted = len(new_tasks) != len(tasks)
     if deleted:
+        delete_prompt_uploads(task_id)
         save_tasks(new_tasks)
     return deleted
 

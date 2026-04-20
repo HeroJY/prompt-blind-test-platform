@@ -85,7 +85,7 @@
         <div class="modal-body" style="margin-bottom: 24px;">
           <pre style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; padding: 16px; background-color: #f8fafc; border-radius: 8px; font-family: monospace;">{{ currentPromptContent }}</pre>
           <div v-if="currentPromptImages.length" class="prompt-image-grid">
-            <img v-for="(image, index) in currentPromptImages" :key="`history-prompt-${index}`" :src="image.dataUrl" :alt="image.name || `Prompt ${currentPromptType} ${index + 1}`" class="prompt-image-preview" />
+            <img v-for="(image, index) in currentPromptImages" :key="`history-prompt-${index}`" :src="imageSrc(image)" :alt="image.name || `Prompt ${currentPromptType} ${index + 1}`" class="prompt-image-preview" />
           </div>
         </div>
         <div class="modal-footer" style="display: flex; justify-content: flex-end;">
@@ -97,6 +97,8 @@
 </template>
 
 <script>
+import { resolveAssetUrl } from '../../api'
+
 export default {
   name: 'History',
   props: {
@@ -183,6 +185,10 @@ export default {
         this.currentPromptContent = '未找到对应的Prompt内容'
       }
       this.showPromptModal = true
+    },
+    imageSrc(image) {
+      if (!image) return ''
+      return resolveAssetUrl(image.dataUrl || image.url || '')
     }
   }
 }
