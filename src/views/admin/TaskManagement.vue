@@ -3,10 +3,10 @@
     <div class="topbar">
       <div>
         <h1 class="section-title">广场任务管理</h1>
-        <p class="section-subtitle">这里展示更接近最终后台的任务列表。你可以创建任务、选择任务进入配置、发布任务，或查看统计结果。</p>
+        <p class="section-subtitle">这里展示当前后端中的任务列表。你可以创建任务、进入配置、发布任务，并查看统计结果。</p>
       </div>
       <div class="btn-row">
-        <button class="btn primary" id="createDemoTaskBtn" @click="$emit('create-demo-task')">创建模拟任务</button>
+        <button class="btn primary" id="createDemoTaskBtn" @click="$emit('create-demo-task')">创建任务</button>
       </div>
     </div>
     <div class="grid-4" id="adminKpis">

@@ -10,7 +10,7 @@
       </div>
     </div>
 
-    <div v-if="!selectedTask" id="editorEmpty" class="empty">请先在任务管理页选择一个任务，或点击“创建模拟任务”。</div>
+    <div v-if="!selectedTask" id="editorEmpty" class="empty">请先选择一个任务，或先创建一个新任务。</div>
 
     <div v-else id="editorContent">
       <!-- 任务基本信息模块 -->
@@ -40,7 +40,7 @@
           <div class="eyebrow">提示词导入</div>
           <div class="btn-row">
             <button class="btn primary" @click="triggerFileUpload">上传提示词</button>
-            <input type="file" ref="fileInput" style="display: none" @change="handleFileUpload" />
+            <input type="file" ref="fileInput" accept=".xlsx" style="display: none" @change="handleFileUpload" />
           </div>
         </div>
         <div class="field-grid">
@@ -66,7 +66,7 @@
           <div class="eyebrow">测试数据导入</div>
           <div class="btn-row">
             <button class="btn primary" @click="triggerDataUpload">上传数据</button>
-            <input type="file" ref="dataInput" style="display: none" @change="handleDataUpload" />
+            <input type="file" ref="dataInput" accept=".xlsx" style="display: none" @change="handleDataUpload" />
           </div>
         </div>
         <div class="field-grid">
@@ -83,7 +83,7 @@
           <div class="eyebrow">任务测试案例</div>
         </div>
         
-        <!-- 新增题目和批量导入模拟 -->
+        <!-- 新增题目和批量导入 -->
         <div class="panel-grid">
           <div class="card pad">
             <div class="eyebrow">新增题目</div>
@@ -110,17 +110,18 @@
           </div>
 
           <div class="card pad">
-            <div class="eyebrow">批量导入模拟</div>
+            <div class="eyebrow">批量导入</div>
             <div class="upload-box">
-              <div style="font-size:20px;font-weight:800;">ZIP 导入包</div>
-              <div style="margin-top:8px;color:var(--muted);font-size:14px;line-height:1.8;">模拟 manifest.csv + images/ 目录结构。点击按钮后会一次性向当前任务加入几条演示数据。</div>
+              <div style="font-size:20px;font-weight:800;">Excel 题目导入</div>
+              <div style="margin-top:8px;color:var(--muted);font-size:14px;line-height:1.8;">当前仅支持 `.xlsx`。ZIP 功能预留但未开放。</div>
               <div class="btn-row" style="justify-content:center;margin-top:18px;">
-                <button class="btn primary" id="mockImportBtn" @click="$emit('mock-import', mockImportText)">批量导入</button>
+                <button class="btn primary" id="itemImportBtn" @click="triggerItemUpload">上传并导入</button>
+                <input type="file" ref="itemInput" accept=".xlsx" style="display: none" @change="handleItemUpload" />
               </div>
               <div class="file-chip-row">
-                <span class="file-chip">manifest.csv</span>
-                <span class="file-chip">images/q301_1.jpg</span>
-                <span class="file-chip">images/q301_2.jpg</span>
+                <span class="file-chip">code</span>
+                <span class="file-chip">sort_order</span>
+                <span class="file-chip">source_text</span>
               </div>
             </div>
           </div>
@@ -164,6 +165,8 @@
 </template>
 
 <script>
+import { postFile } from '../../api'
+
 export default {
   name: 'ImportTaskEditor',
   props: {
@@ -185,7 +188,6 @@ export default {
         sortOrder: 99,
         sourceText: ''
       },
-      mockImportText: '',
       testData: ''
     }
   },
@@ -257,27 +259,61 @@ export default {
       };
     },
     triggerFileUpload() {
-      this.$refs.fileInput.click();
+      this.$refs.fileInput.click()
     },
-    handleFileUpload() {
-      // 模拟文件上传功能，不做实际解析
-      alert('提示词文件已上传并自动解析');
-      // 填充示例内容到 prompt a 和 prompt b
-      this.editorForm.promptA = '这是 Prompt A 的示例内容，用于测试盲选功能。请根据用户的问题生成合适的回答。';
-      this.editorForm.promptB = '这是 Prompt B 的示例内容，用于测试盲选功能。请根据用户的问题生成详细、准确的回答。';
-      // 清空文件输入
-      this.$refs.fileInput.value = '';
+    async handleFileUpload(event) {
+      const file = event.target.files && event.target.files[0]
+      if (!file) return
+      try {
+        const data = await postFile('/upload/prompt_excel', file)
+        this.editorForm.name = data.task_name || this.editorForm.name
+        this.editorForm.description = data.task_description || this.editorForm.description
+        this.editorForm.promptA = data.prompt_a_text || ''
+        this.editorForm.promptB = data.prompt_b_text || ''
+        alert('提示词文件已上传并解析完成')
+      } catch (error) {
+        alert(error.message || '提示词上传失败')
+      } finally {
+        this.$refs.fileInput.value = ''
+      }
     },
     triggerDataUpload() {
-      this.$refs.dataInput.click();
+      this.$refs.dataInput.click()
     },
-    handleDataUpload() {
-      // 模拟文件上传功能，不做实际解析
-      alert('测试数据文件已上传并自动解析');
-      // 填充示例内容到测试数据
-      this.testData = '这是测试数据的示例内容，包含了多个测试用例。上传数据后，内容会显示在这里。';
-      // 清空文件输入
-      this.$refs.dataInput.value = '';
+    async handleDataUpload(event) {
+      const file = event.target.files && event.target.files[0]
+      if (!file) return
+      try {
+        const data = await postFile('/upload/test_data_excel', file)
+        this.testData = data.preview_text || ''
+        alert('测试数据文件已上传并解析完成')
+      } catch (error) {
+        alert(error.message || '测试数据上传失败')
+      } finally {
+        this.$refs.dataInput.value = ''
+      }
+    },
+    triggerItemUpload() {
+      this.$refs.itemInput.click()
+    },
+    async handleItemUpload(event) {
+      const file = event.target.files && event.target.files[0]
+      if (!file) return
+      try {
+        const data = await postFile('/upload/item_excel', file)
+        ;(data.items || []).forEach(item => {
+          this.$emit('add-item', {
+            code: item.code,
+            sortOrder: item.sort_order,
+            sourceText: item.source_text
+          })
+        })
+        alert('题目 Excel 已导入')
+      } catch (error) {
+        alert(error.message || '题目导入失败')
+      } finally {
+        this.$refs.itemInput.value = ''
+      }
     }
   }
 }

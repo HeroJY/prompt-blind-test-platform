@@ -3,7 +3,7 @@
     <div class="topbar">
       <div>
         <h1 class="section-title" id="sessionTaskTitle">{{ currentSession ? `进行中的测试 - ${taskName}` : '测试会话' }}</h1>
-        <p class="section-subtitle">每选择一次都会立刻保存到模拟数据中。你可以体验“选一题就退出”的流程，看统计是否正确累计。</p>
+        <p class="section-subtitle">每选择一次都会立刻写入后端。你可以随时退出，再回来查看历史记录和统计累计结果。</p>
       </div>
       <div class="btn-row">
         <button class="btn secondary" @click="$emit('back')">返回任务列表</button>
@@ -116,6 +116,8 @@
 </template>
 
 <script>
+import { buildOperator, postJSON } from '../../api'
+
 export default {
   name: 'TestSession',
   props: {
@@ -140,6 +142,10 @@ export default {
       default: ''
     },
     task: {
+      type: Object,
+      default: null
+    },
+    currentUser: {
       type: Object,
       default: null
     }
@@ -306,101 +312,67 @@ export default {
         this.$emit('next-question');
       }
     },
-    generateAnswers() {
-      console.log('generateAnswers called, userInput:', this.userInput)
-      console.log('currentQuestion:', this.currentQuestion)
-      
-      // 检查用户是否输入内容
+    async generateAnswers() {
       if (!this.userInput.trim()) {
         alert('请输入原始问题');
-        return;
+        return
       }
-      
-      // 确保当前题目存在
+
       if (this.currentQuestion) {
-        // 保存当前用户输入到userInputs对象
         const inputValue = this.userInput
-        console.log('User input saved before generating answers:', this.userInputs)
         this.$set(this.userInputs, this.currentQuestion.id, inputValue)
-        // 传递用户输入变化给父组件
         this.$emit('user-input-change', this.currentQuestion.id, inputValue)
       }
-      
-      // 显示加载状态
+
       this.isGenerating = true
       this.generateButtonDisabled = true
       this.inputDisabled = true
-      
-      // 模拟生成过程（实际项目中这里会调用API）
-      setTimeout(() => {
-        // 模拟生成回答
+
+      try {
+        const data = await postJSON('/session/generate', {
+          operator: buildOperator(this.currentUser),
+          sessionId: this.currentSession.id,
+          slotIndex: this.currentQuestionIndex,
+          originalQuestion: this.userInput,
+          testData: this.currentTestData
+        })
+
         if (this.currentQuestion) {
-          // 随机分配prompt a和b到回答A和B
-          const isPromptARandom = Math.random() > 0.5
-          const promptMapping = {
-            a: isPromptARandom ? 'prompt_a' : 'prompt_b',
-            b: isPromptARandom ? 'prompt_b' : 'prompt_a'
-          }
-          
-          // 保存映射关系
-          this.$set(this.promptMappings, this.currentQuestion.id, promptMapping)
-          
-          // 调用API方法（预留）
-          const answers = this.callGenerateAPI(this.userInput, this.currentTestData, promptMapping)
-          
-          // 保存生成的回答到当前问题对象
-          this.currentQuestion.answerA = answers.a
-          this.currentQuestion.answerB = answers.b
-          
-          // 保存映射关系到问题对象，以便后续保存
-          this.currentQuestion.promptMapping = promptMapping
-          
-          console.log('Generated answers saved to currentQuestion:', this.currentQuestion)
-          console.log('Prompt mapping:', promptMapping)
+          this.currentQuestion.answerA = data.candidateA || ''
+          this.currentQuestion.answerB = data.candidateB || ''
+          this.currentQuestion.questionRecordId = data.questionRecordId || ''
         }
-        
-        // 显示答案
+
         this.showAnswers = true
+      } catch (error) {
+        alert(error.message || '生成失败')
+        this.generateButtonDisabled = false
+        this.inputDisabled = false
+      } finally {
         this.isGenerating = false
-      }, 1500)
-    },
-    callGenerateAPI(question, testData, promptMapping) {
-      // 预留API调用方法
-      // 实际项目中这里会调用真实的API接口
-      // 参数：原始问题、测试数据、prompt映射关系
-      console.log('Calling generate API with:', {
-        question,
-        testData,
-        promptMapping
-      })
-      
-      // 返回模拟结果
-      return {
-        a: `这是针对问题"${question}"的回答A，使用了${promptMapping.a === 'prompt_a' ? 'Prompt A' : 'Prompt B'}的指令。`,
-        b: `这是针对问题"${question}"的回答B，使用了${promptMapping.b === 'prompt_a' ? 'Prompt A' : 'Prompt B'}的指令。`
       }
     },
-    generateJudgeAnswer() {
+    async generateJudgeAnswer() {
       if (!this.currentQuestion) return
-      
-      // 显示加载状态
+      if (!this.currentQuestion.questionRecordId) {
+        alert('请先生成候选回答')
+        return
+      }
+
       this.isJudging = true
-      
-      // 模拟大模型分析过程（实际项目中这里会调用API）
-      setTimeout(() => {
-        // 生成裁判结果
-        const judgeResult = {
-          recommended: Math.random() > 0.5 ? 'A' : 'B',
-          reason: '基于以下因素：1. 回答的完整性和准确性；2. 语言表达的清晰度和专业性；3. 对用户需求的理解程度；4. 解决方案的可行性。经过综合评估，推荐选择 ' + (Math.random() > 0.5 ? 'A' : 'B') + '。'
-        }
-        
-        // 保存裁判结果
+
+      try {
+        const judgeResult = await postJSON('/session/judge', {
+          operator: buildOperator(this.currentUser),
+          sessionId: this.currentSession.id,
+          questionRecordId: this.currentQuestion.questionRecordId
+        })
         this.$set(this.modelJudgeAnswers, this.currentQuestion.id, judgeResult)
-        console.log('Model judge answer generated:', judgeResult)
-        
-        // 结束加载状态
+      } catch (error) {
+        alert(error.message || '裁判失败')
+      } finally {
         this.isJudging = false
-      }, 2000)
+      }
     },
     getUserInputs() {
       return this.userInputs

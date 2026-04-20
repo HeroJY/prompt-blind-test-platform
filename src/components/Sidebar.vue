@@ -4,7 +4,7 @@
       <div class="brand-mark">AB</div>
       <div>
         <h2>Prompt 盲测系统</h2>
-        <p>模拟数据原型</p>
+        <p>本地联调版本</p>
       </div>
     </div>
 
@@ -23,9 +23,7 @@
       <div class="nav-title">管理员</div>
       <button class="nav-item" :class="{ active: currentView === 'admin-generate' }" @click="$emit('change-view', 'admin-generate')">Prompt一键生成</button>
       <button class="nav-item" :class="{ active: currentView === 'admin-test' || currentView === 'admin-import' }" @click="$emit('change-view', 'admin-test')">Prompt盲选测试</button>
-      <!-- <button class="nav-item" :class="{ active: currentView === 'admin-tasks' }" @click="$emit('change-view', 'admin-tasks')">广场任务管理</button>
-      <button class="nav-item" :class="{ active: currentView === 'admin-editor' }" @click="$emit('change-view', 'admin-editor')">广场任务配置</button>
-      <button class="nav-item" :class="{ active: currentView === 'admin-stats' }" @click="$emit('change-view', 'admin-stats')">广场任务统计结果</button> -->
+      <button class="nav-item" :class="{ active: ['admin-tasks', 'admin-editor', 'admin-stats'].includes(currentView) }" @click="$emit('change-view', 'admin-tasks')">广场任务管理</button>
     </div>
 
     <div class="nav-group">

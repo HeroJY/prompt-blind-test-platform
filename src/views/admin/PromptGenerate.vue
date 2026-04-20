@@ -45,6 +45,8 @@
 </template>
 
 <script>
+import { postJSON } from '../../api'
+
 export default {
   name: 'PromptGenerate',
   data() {
@@ -55,23 +57,25 @@ export default {
     }
   },
   methods: {
-    generatePrompt() {
+    async generatePrompt() {
       if (!this.question.trim()) {
-        alert('请输入问题');
-        return;
+        alert('请输入问题')
+        return
       }
-      
-      this.isGenerating = true;
-      this.result = '';
-      
-      // 模拟生成过程
-      setTimeout(() => {
-        this.result = this.generateMockResult();
-        this.isGenerating = false;
-      }, 2000);
-    },
-    generateMockResult() {
-      return `针对您提出的问题："${this.question}"，我为您生成以下回答：\n\n这是一个基于您输入问题的通用回答。由于您的问题可能涉及多个方面，我建议您提供更多详细信息，以便我能够为您提供更准确、更有针对性的解决方案。\n\n如果您有任何具体的需求或场景，请随时告知，我会根据您的具体情况为您生成更合适的回答。`;
+
+      this.isGenerating = true
+      this.result = ''
+
+      try {
+        const data = await postJSON('/ai/prompt_generate', {
+          requirement: this.question
+        })
+        this.result = data.prompt_text || ''
+      } catch (error) {
+        alert(error.message || '生成失败')
+      } finally {
+        this.isGenerating = false
+      }
     }
   }
 }

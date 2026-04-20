@@ -29,7 +29,6 @@
         <ImportTaskEditor v-if="(currentUser.role === 'tester' && currentView === 'tester-import') || (currentUser.role === 'admin' && currentView === 'admin-import')" 
           :selected-task="selectedTask"
           @add-item="addItem"
-          @mock-import="mockImport"
           @delete-item="deleteItem"
           @back="backFromImport"
           @save="saveImportTask"
@@ -47,8 +46,9 @@
           :current-question-index="currentQuestionIndex"
           :selected-answer="selectedAnswer"
           :save-hint-text="saveHintText"
-          :task-name="currentSession ? testerTasks.find(t => t.id === currentSession.taskId).name : '' "
-          :task="currentSession ? testerTasks.find(t => t.id === currentSession.taskId) : null"
+          :task-name="currentTaskName"
+          :task="currentTaskData"
+          :current-user="currentUser"
           @select-answer="selectAnswer"
           @prev-question="prevQuestion"
           @next-question="nextQuestion"
@@ -78,7 +78,6 @@
           @publish-task="publishTask"
           @save-draft="saveDraft"
           @add-item="addItem"
-          @mock-import="mockImport"
           @delete-item="deleteItem"
           @back-to-task-management="backToTaskManagement"
         />
@@ -116,8 +115,9 @@
           :current-question-index="currentQuestionIndex"
           :selected-answer="selectedAnswer"
           :save-hint-text="saveHintText"
-          :task-name="currentSession ? adminTasks.find(t => t.id === currentSession.taskId).name : '' "
-          :task="currentSession ? adminTasks.find(t => t.id === currentSession.taskId) : null"
+          :task-name="currentTaskName"
+          :task="currentTaskData"
+          :current-user="currentUser"
           @select-answer="selectAnswer"
           @prev-question="prevQuestion"
           @next-question="nextQuestion"
@@ -151,6 +151,7 @@ import TaskEditor from './views/admin/TaskEditor.vue'
 import Stats from './views/admin/Stats.vue'
 import PromptGenerate from './views/admin/PromptGenerate.vue'
 import ImportTaskEditor from './views/tester/ImportTaskEditor.vue'
+import { buildOperator, postJSON } from './api'
 
 export default {
   name: 'App',
@@ -184,136 +185,9 @@ export default {
         message: ''
       },
       tempTask: null,
-      adminManagementTasks: [
-        {
-          id: 1,
-          name: '这是第一个需要发布的任务对比',
-          description: '比较两组提示词的效果1。',
-          promptA: '这里是假的提示词1。',
-          promptB: '请使用假的提示词2，用高情商生成回复：先共情，再给回答。',
-          status: 'published',
-          questionLimit: 49,
-          createdBy: 'admin01',
-          items: [
-            { id: 101, code: 'Q001', sourceType: 'text', sortOrder: 1, sourceText: '用户投诉：我昨天购买的商品今天就降价了，而且客服回复非常慢。请生成一段安抚用户情绪、解释规则并给出合理补偿建议的话术。', images: [], answerA: '您好，非常抱歉给您带来了不好的购物体验，也理解您看到商品短时间内出现价格变化后会产生落差感。平台活动价格会随时间动态调整，但我们非常重视您的感受。为了表达歉意，建议为您申请一张优惠券或积分补偿；如果您的订单符合价保条件，我也可以继续协助您核实处理。', answerB: '真的非常抱歉让您遇到这样的情况，换作是我也会感到失落。商品价格会因为活动时间不同而产生调整，这边无法直接保证下单后价格始终不变，但我会尽力帮您争取更好的处理方案，并优先为您申请补偿福利。' },
-            { id: 102, code: 'Q002', sourceType: 'text', sortOrder: 2, sourceText: '用户反馈：快递已经延迟两天还没到，客服之前答应今天送达但目前没有更新。请生成一段安抚和补偿建议回复。', images: [], answerA: '您好，很抱歉让您久等了，也理解您在已经被承诺送达后却仍未收到包裹时的失望。我们会立即帮您再次催促物流并同步最新节点；如果最终仍超出承诺时效，我们也会为您申请补偿方案，尽量减少这次延迟带来的影响。', answerB: '非常抱歉这次配送没有达到预期，也感谢您耐心反馈。当前我们会先帮您核实物流异常原因，并持续跟进配送结果；同时这边会为您备注异常情况，若超时确认成立，会优先协助申请补偿。' },
-            { id: 103, code: 'Q003', sourceType: 'text', sortOrder: 3, sourceText: '用户反馈商品表面存在明显划痕和边角磨损，外观完整性受影响。请生成客服回复。', images: [], answerA: '从图片来看，商品表面存在明显划痕和边角磨损，外观完整性受影响。建议在回复中先确认用户上传的证据清晰有效，再表达歉意，并提供换货、退货或补偿三种可执行方案。', answerB: '结合多张图片信息，问题主要集中在外观瑕疵与局部破损，用户主观感受通常会偏负面。更合适的回复方式是先认可图片证据，再说明售后流程，最后给出优先处理承诺。' },
-            { id: 104, code: 'Q004', sourceType: 'text', sortOrder: 4, sourceText: '请针对“订单已经申请退款，但退款到账时间比预期慢，用户比较焦虑”的场景生成客服回复。', images: [], answerA: '您好，理解您现在着急想尽快收到退款的心情，也非常抱歉让您等待。退款在审核通过后通常会按原支付路径返还，具体到账时间会受支付渠道处理进度影响。我们会继续帮您跟进状态，如有异常会第一时间协助处理。', answerB: '非常抱歉退款进度没有达到您的预期，我们完全理解这会让人感到不安。当前退款申请已经在流程中，不同支付方式到账时效会有所差异；这边会继续为您关注进度，并在需要时优先协助您升级处理。' },
-            { id: 105, code: 'Q005', sourceType: 'text', sortOrder: 5, sourceText: '用户表示安装服务预约多次改期，希望客服进行解释和安抚。', images: [], answerA: '您好，非常抱歉安装预约多次调整，确实给您添麻烦了。我们会立即帮您重新核实最近可安排时间，并优先为您争取更稳定的上门时段；如果因此影响了您的使用体验，也会为您同步补偿方案。', answerB: '很抱歉让您在安装安排上反复等待，这样的体验确实不好。我们会先尽快确认改期原因，再为您协调新的安装时间，并尽量减少再次变动；后续如果需要，我们也会协助您申请对应补偿。' },
-            { id: 106, code: 'Q006', sourceType: 'text', sortOrder: 6, sourceText: '用户收到商品后发现配件缺失，希望客服回复。', images: [], answerA: '您好，给您带来不便真的很抱歉。针对您反馈的配件缺失问题，我们会先帮您核实订单与商品清单，如确认属实，可为您补发缺失配件，或根据情况协助申请相应补偿。', answerB: '非常抱歉让您收到的商品不完整，也理解这会影响正常使用。我们会马上为您核对包装与发货信息，如果确认缺件，会优先为您安排补发或提供其他处理方案。' },
-            { id: 107, code: 'Q007', sourceType: 'text', sortOrder: 7, sourceText: '用户质疑客服之前承诺过可以特殊处理，现在却说不能办。请生成客服回复。', images: [], answerA: '您好，非常抱歉前后信息不一致给您造成了困扰。我们会先重新核查之前的沟通记录，尽量给您一个清晰、统一的处理说明；如果确实存在服务表达不准确的情况，我们也会积极协助补救。', answerB: '很抱歉这次沟通让您感到被反复说明，您的不满我们完全理解。我们会尽快核实此前承诺内容，并基于实际规则给出明确答复，同时尽力为您争取更合理的处理方案。' },
-            { id: 108, code: 'Q008', sourceType: 'text', sortOrder: 8, sourceText: '用户说包装破损，但商品本身暂时还能使用，希望得到客服回复。', images: [], answerA: '您好，非常抱歉包裹送达时包装出现破损。即便商品暂时还能使用，这样的体验也不应该发生。我们会记录这次异常配送情况，并可根据实际影响帮您申请适当补偿。', answerB: '抱歉让您收到的包裹包装状态不佳，感谢您第一时间反馈。我们会先帮您登记物流异常，并根据包装受损程度及对商品使用的影响，进一步协助申请补偿或售后支持。' },
-            { id: 109, code: 'Q009', sourceType: 'text', sortOrder: 9, sourceText: '请处理“用户想取消订单，但已经进入仓库打包流程”的客服话术。', images: [], answerA: '您好，理解您现在希望尽快取消订单的需求。由于订单已进入仓库打包流程，系统暂时可能无法直接拦截，但我们会立即帮您尝试联系仓库核实处理；若无法及时取消，您也可以在签收前后按规则申请退货。', answerB: '很抱歉当前订单状态给您的取消操作带来了不便。由于商品已经进入打包流程，系统拦截成功与否需要以仓库处理结果为准；我们会先帮您尽快提交取消申请，同时同步后续可执行的退货路径。' },
-            { id: 110, code: 'Q010', sourceType: 'text', sortOrder: 10, sourceText: '用户称发票一直没有开具成功，影响报销，希望客服解释并安抚。', images: [], answerA: '您好，非常抱歉发票开具进度影响了您的报销安排。我们会立即帮您核查当前开票状态，并尽快推动处理；如果存在信息缺失或系统异常，也会第一时间联系您补充，尽量缩短等待时间。', answerB: '很抱歉发票问题影响到了您的使用和报销节奏，我们理解这会带来实际不便。我们将马上为您确认失败原因，并优先协助推进开票处理，后续也会持续同步结果。' },
-            { id: 111, code: 'Q011', sourceType: 'text', sortOrder: 11, sourceText: '用户反馈外箱有压痕和破裂，希望客服回复。', images: [], answerA: '根据图片可见外箱有压痕和破裂，建议在客服回复中先确认照片已收到，再结合物流环节说明处理进度，最后给出退换或补偿路径。', answerB: '从图片看主要问题是运输造成的外包装受损，适合采用“认可证据—表达歉意—提供处理方案”的回复结构，以提升用户接受度。' },
-            { id: 112, code: 'Q012', sourceType: 'text', sortOrder: 12, sourceText: '用户抱怨活动规则太复杂，希望客服解释但不要显得推卸责任。', images: [], answerA: '您好，很抱歉活动说明没有让您第一时间看明白，也感谢您指出这个问题。当前活动的参与条件和优惠生效方式会因页面配置有所不同，我们会尽量用更清楚的方式为您说明，并协助核实您当前订单是否满足相关条件。', answerB: '非常抱歉给您带来理解成本，我们也理解规则复杂会影响体验。我们会先把与您当前订单相关的关键条件简化说明给您，并继续协助确认是否有可以补救或优化的空间。' }
-          ],
-          sessions: [
-            { id: 's-old-1', userId: 'tester01', answeredCount: 5, answers: [{ itemId: 101, selectedPrompt: 'prompt_a' }, { itemId: 102, selectedPrompt: 'prompt_b' }, { itemId: 103, selectedPrompt: 'prompt_a' }, { itemId: 104, selectedPrompt: 'prompt_a' }, { itemId: 105, selectedPrompt: 'prompt_b' }] },
-            { id: 's-old-2', userId: 'tester02', answeredCount: 4, answers: [{ itemId: 101, selectedPrompt: 'prompt_b' }, { itemId: 102, selectedPrompt: 'prompt_a' }, { itemId: 103, selectedPrompt: 'prompt_a' }, { itemId: 104, selectedPrompt: 'prompt_b' }] },
-            { id: 's-old-3', userId: 'tester03', answeredCount: 6, answers: [{ itemId: 101, selectedPrompt: 'prompt_a' }, { itemId: 102, selectedPrompt: 'prompt_a' }, { itemId: 103, selectedPrompt: 'prompt_b' }, { itemId: 104, selectedPrompt: 'prompt_a' }, { itemId: 105, selectedPrompt: 'prompt_a' }, { itemId: 106, selectedPrompt: 'prompt_b' }] }
-          ]
-        },
-        {
-          id: 2,
-          name: '尽调报告生成对比',
-          description: '比较两组提示词在尽调报告生成方面的差异。',
-          promptA: '请对输入的客户信息进行综合风险分析，再按用户提问生成结构化回答。',
-          promptB: '请把输入的客户信息整合成要点，用更口语化的表达回答用户，并尽可能减少遗漏。',
-          status: 'published',
-          questionLimit: 49,
-          createdBy: 'admin01',
-          items: [
-            { id: 201, code: 'Q201', sourceType: 'text', sortOrder: 1, sourceText: '分析仪表盘数据，主要波动集中在转化率与客单价，需要先确认渠道结构变化。', images: [], answerA: '从多图可以看出指标主要波动集中在转化率与客单价，需要先确认渠道结构变化。', answerB: '这些图片最关键的信息是转化率下滑和销售额波动，回答时需要把原因和建议一起给出。' },
-            { id: 202, code: 'Q202', sourceType: 'text', sortOrder: 2, sourceText: '分析设计图，总结整体风格问题，并分别点评排版、配色和重点信息层级。', images: [], answerA: '适合先做视觉问题归纳，再提出三条可执行修改建议。', answerB: '更合适的方式是先总结整体风格问题，再分别点评排版、配色和重点信息层级。' }
-          ],
-          sessions: []
-        }
-      ],
-      adminTasks: [
-        {
-          id: 1,
-          name: '客服回复质量对比',
-          description: '比较两组提示词在客服安抚回复中的可读性、同理心表达、规则解释与补偿建议完整度。',
-          promptA: '你是一名资深客服专家，请输出安抚式回复，先表达理解，再说明平台规则，最后给出可执行的补偿建议，整体语气温和、稳定、清晰。',
-          promptB: '请作为高情商客服生成回复：先共情，再说明价格变动或流程机制，最后给出一到两种明确处理路径，并强调继续协助。',
-          testData: '测试数据xxx',
-          questionLimit: 49,
-          createdBy: 'admin01',
-          items: [
-            { id: 101, code: 'Q001', sourceType: 'text', sortOrder: 1, sourceText: '用户投诉：我昨天购买的商品今天就降价了，而且客服回复非常慢。请生成一段安抚用户情绪、解释规则并给出合理补偿建议的话术。', images: [], answerA: '您好，非常抱歉给您带来了不好的购物体验，也理解您看到商品短时间内出现价格变化后会产生落差感。平台活动价格会随时间动态调整，但我们非常重视您的感受。为了表达歉意，建议为您申请一张优惠券或积分补偿；如果您的订单符合价保条件，我也可以继续协助您核实处理。', answerB: '真的非常抱歉让您遇到这样的情况，换作是我也会感到失落。商品价格会因为活动时间不同而产生调整，这边无法直接保证下单后价格始终不变，但我会尽力帮您争取更好的处理方案，并优先为您申请补偿福利。' },
-            { id: 102, code: 'Q002', sourceType: 'text', sortOrder: 2, sourceText: '用户反馈：快递已经延迟两天还没到，客服之前答应今天送达但目前没有更新。请生成一段安抚和补偿建议回复。', images: [], answerA: '您好，很抱歉让您久等了，也理解您在已经被承诺送达后却仍未收到包裹时的失望。我们会立即帮您再次催促物流并同步最新节点；如果最终仍超出承诺时效，我们也会为您申请补偿方案，尽量减少这次延迟带来的影响。', answerB: '非常抱歉这次配送没有达到预期，也感谢您耐心反馈。当前我们会先帮您核实物流异常原因，并持续跟进配送结果；同时这边会为您备注异常情况，若超时确认成立，会优先协助申请补偿。' },
-            { id: 103, code: 'Q003', sourceType: 'images', sortOrder: 3, sourceText: '', images: ['sku_damage_1.jpg', 'sku_damage_2.jpg', 'sku_damage_3.jpg'], answerA: '从图片来看，商品表面存在明显划痕和边角磨损，外观完整性受影响。建议在回复中先确认用户上传的证据清晰有效，再表达歉意，并提供换货、退货或补偿三种可执行方案。', answerB: '结合多张图片信息，问题主要集中在外观瑕疵与局部破损，用户主观感受通常会偏负面。更合适的回复方式是先认可图片证据，再说明售后流程，最后给出优先处理承诺。' },
-            { id: 104, code: 'Q004', sourceType: 'text', sortOrder: 4, sourceText: '请针对“订单已经申请退款，但退款到账时间比预期慢，用户比较焦虑”的场景生成客服回复。', images: [], answerA: '您好，理解您现在着急想尽快收到退款的心情，也非常抱歉让您等待。退款在审核通过后通常会按原支付路径返还，具体到账时间会受支付渠道处理进度影响。我们会继续帮您跟进状态，如有异常会第一时间协助处理。', answerB: '非常抱歉退款进度没有达到您的预期，我们完全理解这会让人感到不安。当前退款申请已经在流程中，不同支付方式到账时效会有所差异；这边会继续为您关注进度，并在需要时优先协助您升级处理。' },
-            { id: 105, code: 'Q005', sourceType: 'text', sortOrder: 5, sourceText: '用户表示安装服务预约多次改期，希望客服进行解释和安抚。', images: [], answerA: '您好，非常抱歉安装预约多次调整，确实给您添麻烦了。我们会立即帮您重新核实最近可安排时间，并优先为您争取更稳定的上门时段；如果因此影响了您的使用体验，也会为您同步补偿方案。', answerB: '很抱歉让您在安装安排上反复等待，这样的体验确实不好。我们会先尽快确认改期原因，再为您协调新的安装时间，并尽量减少再次变动；后续如果需要，我们也会协助您申请对应补偿。' },
-            { id: 106, code: 'Q006', sourceType: 'text', sortOrder: 6, sourceText: '用户收到商品后发现配件缺失，希望客服回复。', images: [], answerA: '您好，给您带来不便真的很抱歉。针对您反馈的配件缺失问题，我们会先帮您核实订单与商品清单，如确认属实，可为您补发缺失配件，或根据情况协助申请相应补偿。', answerB: '非常抱歉让您收到的商品不完整，也理解这会影响正常使用。我们会马上为您核对包装与发货信息，如果确认缺件，会优先为您安排补发或提供其他处理方案。' },
-            { id: 107, code: 'Q007', sourceType: 'text', sortOrder: 7, sourceText: '用户质疑客服之前承诺过可以特殊处理，现在却说不能办。请生成客服回复。', images: [], answerA: '您好，非常抱歉前后信息不一致给您造成了困扰。我们会先重新核查之前的沟通记录，尽量给您一个清晰、统一的处理说明；如果确实存在服务表达不准确的情况，我们也会积极协助补救。', answerB: '很抱歉这次沟通让您感到被反复说明，您的不满我们完全理解。我们会尽快核实此前承诺内容，并基于实际规则给出明确答复，同时尽力为您争取更合理的处理方案。' },
-            { id: 108, code: 'Q008', sourceType: 'text', sortOrder: 8, sourceText: '用户说包装破损，但商品本身暂时还能使用，希望得到客服回复。', images: [], answerA: '您好，非常抱歉包裹送达时包装出现破损。即便商品暂时还能使用，这样的体验也不应该发生。我们会记录这次异常配送情况，并可根据实际影响帮您申请适当补偿。', answerB: '抱歉让您收到的包裹包装状态不佳，感谢您第一时间反馈。我们会先帮您登记物流异常，并根据包装受损程度及对商品使用的影响，进一步协助申请补偿或售后支持。' },
-            { id: 109, code: 'Q009', sourceType: 'text', sortOrder: 9, sourceText: '请处理“用户想取消订单，但已经进入仓库打包流程”的客服话术。', images: [], answerA: '您好，理解您现在希望尽快取消订单的需求。由于订单已进入仓库打包流程，系统暂时可能无法直接拦截，但我们会立即帮您尝试联系仓库核实处理；若无法及时取消，您也可以在签收前后按规则申请退货。', answerB: '很抱歉当前订单状态给您的取消操作带来了不便。由于商品已经进入打包流程，系统拦截成功与否需要以仓库处理结果为准；我们会先帮您尽快提交取消申请，同时同步后续可执行的退货路径。' },
-            { id: 110, code: 'Q010', sourceType: 'text', sortOrder: 10, sourceText: '用户称发票一直没有开具成功，影响报销，希望客服解释并安抚。', images: [], answerA: '您好，非常抱歉发票开具进度影响了您的报销安排。我们会立即帮您核查当前开票状态，并尽快推动处理；如果存在信息缺失或系统异常，也会第一时间联系您补充，尽量缩短等待时间。', answerB: '很抱歉发票问题影响到了您的使用和报销节奏，我们理解这会带来实际不便。我们将马上为您确认失败原因，并优先协助推进开票处理，后续也会持续同步结果。' },
-            { id: 111, code: 'Q011', sourceType: 'images', sortOrder: 11, sourceText: '', images: ['return_box_1.jpg', 'return_box_2.jpg'], answerA: '根据图片可见外箱有压痕和破裂，建议在客服回复中先确认照片已收到，再结合物流环节说明处理进度，最后给出退换或补偿路径。', answerB: '从图片看主要问题是运输造成的外包装受损，适合采用“认可证据—表达歉意—提供处理方案”的回复结构，以提升用户接受度。' },
-            { id: 112, code: 'Q012', sourceType: 'text', sortOrder: 12, sourceText: '用户抱怨活动规则太复杂，希望客服解释但不要显得推卸责任。', images: [], answerA: '您好，很抱歉活动说明没有让您第一时间看明白，也感谢您指出这个问题。当前活动的参与条件和优惠生效方式会因页面配置有所不同，我们会尽量用更清楚的方式为您说明，并协助核实您当前订单是否满足相关条件。', answerB: '非常抱歉给您带来理解成本，我们也理解规则复杂会影响体验。我们会先把与您当前订单相关的关键条件简化说明给您，并继续协助确认是否有可以补救或优化的空间。' }
-          ],
-          sessions: [
-            { id: 's-old-1', userId: 'tester01', answeredCount: 5, answers: [{ itemId: 101, selectedPrompt: 'prompt_a' }, { itemId: 102, selectedPrompt: 'prompt_b' }, { itemId: 103, selectedPrompt: 'prompt_a' }, { itemId: 104, selectedPrompt: 'prompt_a' }, { itemId: 105, selectedPrompt: 'prompt_b' }] },
-            { id: 's-old-2', userId: 'tester02', answeredCount: 4, answers: [{ itemId: 101, selectedPrompt: 'prompt_b' }, { itemId: 102, selectedPrompt: 'prompt_a' }, { itemId: 103, selectedPrompt: 'prompt_a' }, { itemId: 104, selectedPrompt: 'prompt_b' }] },
-            { id: 's-old-3', userId: 'tester03', answeredCount: 6, answers: [{ itemId: 101, selectedPrompt: 'prompt_a' }, { itemId: 102, selectedPrompt: 'prompt_a' }, { itemId: 103, selectedPrompt: 'prompt_b' }, { itemId: 104, selectedPrompt: 'prompt_a' }, { itemId: 105, selectedPrompt: 'prompt_a' }, { itemId: 106, selectedPrompt: 'prompt_b' }] }
-          ]
-        },
-        {
-          id: 2,
-          name: '多图理解与问答完整性对比',
-          description: '比较两组提示词在多图理解、问题归纳和答复完整性方面的差异。',
-          promptA: '请对多张图片进行综合理解，先总结关键信息，再按用户提问生成结构化回答。',
-          promptB: '请把多图信息整合成要点，用更口语化的表达回答用户，并尽可能减少遗漏。',
-          status: 'unpublished',
-          questionLimit: 49,
-          createdBy: 'admin01',
-          items: [
-            { id: 201, code: 'Q201', sourceType: 'text', sortOrder: 1, sourceText: '分析仪表盘数据，主要波动集中在转化率与客单价，需要先确认渠道结构变化。', images: [], answerA: '从多图可以看出指标主要波动集中在转化率与客单价，需要先确认渠道结构变化。', answerB: '这些图片最关键的信息是转化率下滑和销售额波动，回答时需要把原因和建议一起给出。' },
-            { id: 202, code: 'Q202', sourceType: 'text', sortOrder: 2, sourceText: '分析设计图，总结整体风格问题，并分别点评排版、配色和重点信息层级。', images: [], answerA: '适合先做视觉问题归纳，再提出三条可执行修改建议。', answerB: '更合适的方式是先总结整体风格问题，再分别点评排版、配色和重点信息层级。' }
-          ],
-          sessions: []
-        }
-      ],
-      testerTasks: [
-        {
-          id: 1,
-          name: '客服回复质量对比（V3 vs V4）',
-          description: '比较两组提示词在客服安抚回复中的可读性、同理心表达、规则解释与补偿建议完整度。',
-          promptA: '你是一名资深客服专家，请输出安抚式回复，先表达理解，再说明平台规则，最后给出可执行的补偿建议，整体语气温和、稳定、清晰。',
-          promptB: '请作为高情商客服生成回复：先共情，再说明价格变动或流程机制，最后给出一到两种明确处理路径，并强调继续协助。',
-          testData: '测试数据xxx',
-          status: 'unpublished',
-          questionLimit: 49,
-          createdBy: 'admin01',
-          items: [
-            { id: 101, code: 'Q001', sourceType: 'text', sortOrder: 1, sourceText: '用户投诉：我昨天购买的商品今天就降价了，而且客服回复非常慢。请生成一段安抚用户情绪、解释规则并给出合理补偿建议的话术。', images: [], answerA: '您好，非常抱歉给您带来了不好的购物体验，也理解您看到商品短时间内出现价格变化后会产生落差感。平台活动价格会随时间动态调整，但我们非常重视您的感受。为了表达歉意，建议为您申请一张优惠券或积分补偿；如果您的订单符合价保条件，我也可以继续协助您核实处理。', answerB: '真的非常抱歉让您遇到这样的情况，换作是我也会感到失落。商品价格会因为活动时间不同而产生调整，这边无法直接保证下单后价格始终不变，但我会尽力帮您争取更好的处理方案，并优先为您申请补偿福利。' },
-            { id: 102, code: 'Q002', sourceType: 'text', sortOrder: 2, sourceText: '用户反馈：快递已经延迟两天还没到，客服之前答应今天送达但目前没有更新。请生成一段安抚和补偿建议回复。', images: [], answerA: '您好，很抱歉让您久等了，也理解您在已经被承诺送达后却仍未收到包裹时的失望。我们会立即帮您再次催促物流并同步最新节点；如果最终仍超出承诺时效，我们也会为您申请补偿方案，尽量减少这次延迟带来的影响。', answerB: '非常抱歉这次配送没有达到预期，也感谢您耐心反馈。当前我们会先帮您核实物流异常原因，并持续跟进配送结果；同时这边会为您备注异常情况，若超时确认成立，会优先协助申请补偿。' },
-            { id: 103, code: 'Q003', sourceType: 'text', sortOrder: 3, sourceText: '用户收到商品后发现配件缺失，希望客服回复。', images: [], answerA: '您好，给您带来不便真的很抱歉。针对您反馈的配件缺失问题，我们会先帮您核实订单与商品清单，如确认属实，可为您补发缺失配件，或根据情况协助申请相应补偿。', answerB: '非常抱歉让您收到的商品不完整，也理解这会影响正常使用。我们会马上为您核对包装与发货信息，如果确认缺件，会优先为您安排补发或提供其他处理方案。' },
-          ],
-          sessions: [
-            { id: 's-old-1', userId: 'tester01', answeredCount: 5, answers: [{ itemId: 101, selectedPrompt: 'prompt_a' }, { itemId: 102, selectedPrompt: 'prompt_b' }, { itemId: 103, selectedPrompt: 'prompt_a' }, { itemId: 104, selectedPrompt: 'prompt_a' }, { itemId: 105, selectedPrompt: 'prompt_b' }] },
-            { id: 's-old-2', userId: 'tester02', answeredCount: 4, answers: [{ itemId: 101, selectedPrompt: 'prompt_b' }, { itemId: 102, selectedPrompt: 'prompt_a' }, { itemId: 103, selectedPrompt: 'prompt_a' }, { itemId: 104, selectedPrompt: 'prompt_b' }] },
-            { id: 's-old-3', userId: 'tester03', answeredCount: 6, answers: [{ itemId: 101, selectedPrompt: 'prompt_a' }, { itemId: 102, selectedPrompt: 'prompt_a' }, { itemId: 103, selectedPrompt: 'prompt_b' }, { itemId: 104, selectedPrompt: 'prompt_a' }, { itemId: 105, selectedPrompt: 'prompt_a' }, { itemId: 106, selectedPrompt: 'prompt_b' }] }
-          ]
-        },
-        {
-          id: 2,
-          name: 'AI质检结果比对',
-          description: '比较两组提示词在质检结果方面的差异。',
-          promptA: '请对多张图片进行综合理解，先总结关键信息，再按用户提问生成结构化回答。',
-          promptB: '请把多图信息整合成要点，用更口语化的表达回答用户，并尽可能减少遗漏。',
-          status: 'unpublished',
-          questionLimit: 49,
-          createdBy: 'admin01',
-          items: [
-            { id: 201, code: 'Q201', sourceType: 'text', sortOrder: 1, sourceText: '分析仪表盘数据，主要波动集中在转化率与客单价，需要先确认渠道结构变化。', images: [], answerA: '从多图可以看出指标主要波动集中在转化率与客单价，需要先确认渠道结构变化。', answerB: '这些图片最关键的信息是转化率下滑和销售额波动，回答时需要把原因和建议一起给出。' },
-            { id: 202, code: 'Q202', sourceType: 'text', sortOrder: 2, sourceText: '分析设计图，总结整体风格问题，并分别点评排版、配色和重点信息层级。', images: [], answerA: '适合先做视觉问题归纳，再提出三条可执行修改建议。', answerB: '更合适的方式是先总结整体风格问题，再分别点评排版、配色和重点信息层级。' }
-          ],
-          sessions: []
-        }
-      ]
+      adminManagementTasks: [],
+      adminTasks: [],
+      testerTasks: []
     }
   },
   computed: {
@@ -336,38 +210,143 @@ export default {
         taskArray = this.testerTasks
       }
       return taskArray.find(task => task.id === this.selectedTaskId)
+    },
+    currentTaskData() {
+      if (!this.currentSession || !this.currentSession.taskId) {
+        return null
+      }
+      const taskList = this.currentUser && this.currentUser.role === 'admin'
+        ? this.adminTasks
+        : this.testerTasks
+      return taskList.find(task => task.id === this.currentSession.taskId) || null
+    },
+    currentTaskName() {
+      return this.currentTaskData ? this.currentTaskData.name : ''
     }
   },
-  mounted() {
-    // 初始化任务统计数据
-    this.adminTasks.forEach(task => {
-      this.calculateTaskStats(task)
-    })
-    this.adminManagementTasks.forEach(task => {
-      this.calculateTaskStats(task)
-    })
-    this.testerTasks.forEach(task => {
-      this.calculateTaskStats(task)
-    })
-  },
   methods: {
-    login(user) {
+    operator() {
+      return buildOperator(this.currentUser)
+    },
+    cloneDeep(value) {
+      return JSON.parse(JSON.stringify(value))
+    },
+    async apiPost(path, body) {
+      try {
+        return await postJSON(path, body || {})
+      } catch (error) {
+        this.showToast(error.message || '请求失败')
+        return null
+      }
+    },
+    normalizeTask(task) {
+      const result = this.cloneDeep(task || {})
+      result.items = result.items || []
+      result.sessions = result.sessions || []
+      result.questionLimit = result.questionLimit || 49
+      result.promptASelections = result.promptASelections || 0
+      result.promptBSelections = result.promptBSelections || 0
+      result.totalSelections = result.totalSelections || 0
+      result.promptAPercentage = result.promptAPercentage || 0
+      result.promptBPercentage = result.promptBPercentage || 0
+      result.items.forEach(item => {
+        item.promptASelections = item.promptASelections || 0
+        item.promptBSelections = item.promptBSelections || 0
+      })
+      return result
+    },
+    setTasks(tasks) {
+      const normalizedTasks = (tasks || []).map(task => this.normalizeTask(task))
+      if (this.currentUser && this.currentUser.role === 'admin') {
+        this.adminTasks = this.cloneDeep(normalizedTasks)
+        this.adminManagementTasks = this.cloneDeep(normalizedTasks)
+      } else {
+        this.testerTasks = this.cloneDeep(normalizedTasks)
+      }
+      this.rebuildHistoryOperations(normalizedTasks)
+    },
+    rebuildHistoryOperations(tasks) {
+      const operations = []
+      ;(tasks || []).forEach(task => {
+        ;(task.sessions || []).forEach(session => {
+          operations.push({
+            id: `h-${session.id}`,
+            type: 'session_completed',
+            userId: session.userId,
+            taskId: task.id,
+            taskName: task.name,
+            sessionId: session.id,
+            timestamp: session.endTime || session.startTime || new Date().toISOString(),
+            details: {
+              answeredCount: session.answeredCount || (session.answers || []).length,
+              questions: (session.questions || []).map(question => {
+                const answer = (session.answers || []).find(item => item.itemId === question.id)
+                const questionId = String(question.id)
+                return {
+                  id: question.id,
+                  originalQuestion: (session.userInputs || {})[question.id] || (session.userInputs || {})[questionId] || '',
+                  answerA: question.answerA,
+                  answerB: question.answerB,
+                  selectedAnswer: answer ? answer.selectedOption : null,
+                  selectedPrompt: answer ? answer.selectedPrompt : null,
+                  modelJudge: question.modelJudge || null
+                }
+              })
+            }
+          })
+        })
+      })
+      this.historyOperations = operations
+    },
+    async loadTasks() {
+      const data = await this.apiPost('/task/list', {
+        operator: this.operator()
+      })
+      if (!data) return
+      this.setTasks(data.tasks || [])
+    },
+    async refreshTask(taskId) {
+      const data = await this.apiPost('/task/detail', {
+        operator: this.operator(),
+        taskId
+      })
+      if (!data || !data.task) return null
+      const normalizedTask = this.normalizeTask(data.task)
+      ;['adminTasks', 'adminManagementTasks', 'testerTasks'].forEach(key => {
+        const index = this[key].findIndex(item => item.id === normalizedTask.id)
+        if (index >= 0) {
+          this.$set(this[key], index, this.cloneDeep(normalizedTask))
+        }
+      })
+      this.rebuildHistoryOperations(
+        this.currentUser && this.currentUser.role === 'admin'
+          ? this.adminTasks
+          : this.testerTasks
+      )
+      return normalizedTask
+    },
+    async login(user) {
       this.currentUser = user
       this.isLoggedIn = true
       this.currentView = user.role === 'tester' ? 'tester-tasks' : 'admin-generate'
+      await this.loadTasks()
       this.showToast('登录成功')
     },
     logout() {
       this.isLoggedIn = false
-      this.currentUser = null;
+      this.currentUser = null
       this.currentView = 'tester-tasks'
       this.selectedTaskId = null
       this.currentSession = null
+      this.testerTasks = []
+      this.adminTasks = []
+      this.adminManagementTasks = []
+      this.historyOperations = []
       this.showToast('已退出登录')
     },
     switchRole() {
       const newRole = this.currentUser.role === 'tester' ? 'admin' : 'tester'
-      this.login({
+      return this.login({
         username: newRole === 'tester' ? 'tester01' : 'admin01',
         role: newRole
       })
@@ -376,7 +355,8 @@ export default {
       this.selectedTaskId = taskId
       this.currentView = this.currentUser.role === 'admin' ? 'admin-task-detail' : 'tester-task-detail'
     },
-    viewHistory(taskId) {
+    async viewHistory(taskId) {
+      await this.refreshTask(taskId)
       this.selectedTaskId = taskId
       this.currentView = this.currentUser.role === 'admin' ? 'admin-history' : 'tester-history'
     },
@@ -390,85 +370,26 @@ export default {
       this.currentView = 'admin-test'
       this.showToast('已返回任务列表')
     },
-    deleteQuestion(sessionId, questionId) {
-      if (this.selectedTask) {
-        const session = this.selectedTask.sessions.find(session => session.id === sessionId)
-        if (session) {
-          // 从questions数组中删除对应的问题
-          const questionIndex = session.questions.findIndex(q => q.id === questionId)
-          if (questionIndex >= 0) {
-            session.questions.splice(questionIndex, 1)
-          }
-          
-          // 从answers数组中删除对应的答案
-          const answerIndex = session.answers.findIndex(a => a.itemId === questionId)
-          if (answerIndex >= 0) {
-            session.answers.splice(answerIndex, 1)
-          }
-          
-          // 从userInputs中删除对应的输入
-          if (session.userInputs && session.userInputs[questionId]) {
-            delete session.userInputs[questionId]
-          }
-          
-          // 更新answeredCount
-          session.answeredCount = session.answers.length
-          
-          // 如果会话中没有问题了，删除整个会话
-          if (session.questions.length === 0) {
-            const sessionIndex = this.selectedTask.sessions.findIndex(s => s.id === sessionId)
-            if (sessionIndex >= 0) {
-              this.selectedTask.sessions.splice(sessionIndex, 1)
-            }
-          }
-          
-          this.calculateTaskStats(this.selectedTask)
-          this.showToast('测试任务记录已删除')
-        }
+    async deleteQuestion(sessionId, questionId) {
+      const data = await this.apiPost('/history/question/delete', {
+        operator: this.operator(),
+        sessionId,
+        questionId
+      })
+      if (!data) return
+      if (this.selectedTaskId && this.selectedTaskId !== 'temp') {
+        await this.refreshTask(this.selectedTaskId)
       }
+      this.showToast('测试任务记录已删除')
     },
-    startTask(taskId) {
-      const taskArray = this.currentUser.role === 'admin' ? this.adminTasks : this.testerTasks
-      const task = taskArray.find(t => t.id === taskId)
-      if (!task) return
-      
-      // 创建49个问题的槽位
-      const maxQuestions = 49
-      const importedItems = task.items || []
-      const allQuestions = []
-      
-      // 前N个是导入的问题
-      for (let i = 0; i < importedItems.length && i < maxQuestions; i++) {
-        allQuestions.push({
-          ...importedItems[i],
-          isImported: true
-        })
-      }
-      
-      // 后面的都是空问题供用户输入
-      for (let i = importedItems.length; i < maxQuestions; i++) {
-        allQuestions.push({
-          id: Date.now() + i,
-          code: `Q${String(i + 1).padStart(3, '0')}`,
-          sourceType: 'text',
-          sortOrder: i + 1,
-          sourceText: '',
-          images: [],
-          answerA: '',
-          answerB: '',
-          isImported: false
-        })
-      }
-      
-      this.currentSession = {
-        id: `s-${Date.now()}`,
-        taskId: task.id,
-        questions: allQuestions,
-        answers: [],
-        userInputs: {},
-        startTime: new Date()
-      }
-      
+    async startTask(taskId) {
+      const data = await this.apiPost('/session/start', {
+        operator: this.operator(),
+        taskId,
+        questionLimit: 49
+      })
+      if (!data) return
+      this.currentSession = data.session
       this.currentQuestionIndex = 0
       this.selectedAnswer = null
       this.userInputs = {}
@@ -478,20 +399,29 @@ export default {
       if (this.currentSession) {
         this.currentSession.userInputs = this.currentSession.userInputs || {}
         this.currentSession.userInputs[questionId] = value
-        console.log('User input changed:', questionId, value)
-        // console.log('真是你个老666：' , this.currentSession);
       }
     },
-    selectAnswer(answer) {
+    async selectAnswer(answer) {
+      if (!this.currentSession) return
+      const currentQuestion = this.currentSession.questions[this.currentQuestionIndex]
+      if (!currentQuestion || !currentQuestion.questionRecordId) {
+        alert('请先生成候选回答')
+        return
+      }
+      const data = await this.apiPost('/session/vote', {
+        operator: this.operator(),
+        sessionId: this.currentSession.id,
+        questionRecordId: currentQuestion.questionRecordId,
+        selectedOption: answer
+      })
+      if (!data) return
       this.selectedAnswer = answer
       this.saveHintText = '已保存选择，可继续下一题。'
-      
-      // 保存答案
       const currentAnswer = {
-        itemId: this.currentSession.questions[this.currentQuestionIndex].id,
-        selectedPrompt: answer === 'A' ? 'prompt_a' : 'prompt_b'
+        itemId: currentQuestion.id,
+        selectedOption: answer,
+        selectedPrompt: data.selectedPrompt
       }
-      
       const existingAnswerIndex = this.currentSession.answers.findIndex(a => a.itemId === currentAnswer.itemId)
       if (existingAnswerIndex >= 0) {
         this.currentSession.answers[existingAnswerIndex] = currentAnswer
@@ -515,136 +445,32 @@ export default {
     },
     getAnswerForCurrentQuestion() {
       const answer = this.currentSession.answers.find(a => a.itemId === this.currentSession.questions[this.currentQuestionIndex].id)
-      return answer ? (answer.selectedPrompt === 'prompt_a' ? 'A' : 'B') : null
+      return answer ? answer.selectedOption || null : null
     },
-    quitSession() {
-      if (this.currentSession) {
-        // 保存会话到任务
-        const taskArray = this.currentUser.role === 'admin' ? this.adminTasks : this.testerTasks
-        const task = taskArray.find(t => t.id === this.currentSession.taskId)
-        if (task) {
-          // 过滤出有用户输入且有选择的问题
-          const validQuestions = this.currentSession.questions.filter(q => {
-            const hasUserInput = this.currentSession.userInputs && this.currentSession.userInputs[q.id] && this.currentSession.userInputs[q.id].trim()
-            const hasAnswer = this.currentSession.answers.some(a => a.itemId === q.id)
-            return hasUserInput && hasAnswer
-          })
-          
-          // 过滤出对应的答案
-          const validAnswers = this.currentSession.answers.filter(a => 
-            validQuestions.some(q => q.id === a.itemId)
-          )
-          
-          // 过滤出对应的用户输入
-          const validUserInputs = {}
-          validQuestions.forEach(q => {
-            if (this.currentSession.userInputs && this.currentSession.userInputs[q.id]) {
-              validUserInputs[q.id] = this.currentSession.userInputs[q.id]
-            }
-          })
-          
-          // 只有当有有效问题时才保存会话
-          if (validQuestions.length > 0) {
-            // 获取大模型裁判结果
-            let modelJudgeAnswers = {}
-            if (this.$refs.testSession) {
-              modelJudgeAnswers = this.$refs.testSession.getModelJudgeAnswers()
-              console.log('Model judge answers:', modelJudgeAnswers)
-            }
-            
-            // 获取测试数据
-            let testDataByQuestion = {}
-            if (this.$refs.testSession) {
-              testDataByQuestion = this.$refs.testSession.testDataByQuestion
-              console.log('Test data by question:', testDataByQuestion)
-            }
-            
-            // 构建完整的会话信息，包括用户输入、候选回答、选择结果和大模型裁判结果
-            const sessionWithDetails = {
-              id: this.currentSession.id,
-              userId: this.currentUser.username,
-              answeredCount: validAnswers.length,
-              answers: validAnswers,
-              userInputs: validUserInputs,
-              testDataByQuestion: testDataByQuestion,
-              questions: validQuestions.map(q => ({
-                ...q,
-                modelJudge: modelJudgeAnswers[q.id] || null,
-                testData: testDataByQuestion[q.id] || ''
-              })),
-              endTime: new Date()
-            }
-            
-            console.log('Session with details:', sessionWithDetails)
-            
-            task.sessions.push(sessionWithDetails)
-            this.calculateTaskStats(task)
-            
-            // 记录到历史操作
-            this.historyOperations.push({
-              id: `h-${Date.now()}`,
-              type: 'session_completed',
-              userId: this.currentUser.username,
-              taskId: task.id,
-              taskName: task.name,
-              sessionId: this.currentSession.id,
-              timestamp: new Date(),
-              details: {
-                answeredCount: validAnswers.length,
-                questions: validQuestions.map(q => {
-                  const answer = validAnswers.find(a => a.itemId === q.id)
-                  let selectedAnswer = null
-                  let selectedPrompt = null
-                  
-                  if (answer) {
-                    // 获取用户选择的回答（A或B）
-                    selectedAnswer = answer.selectedPrompt === 'prompt_a' ? 'A' : 'B'
-                    
-                    // 根据promptMapping确定实际选择的prompt
-                    if (q.promptMapping) {
-                      if (selectedAnswer === 'A') {
-                        selectedPrompt = q.promptMapping.a
-                      } else {
-                        selectedPrompt = q.promptMapping.b
-                      }
-                    } else {
-                      // 如果没有promptMapping，使用默认映射
-                      selectedPrompt = answer.selectedPrompt
-                    }
-                  }
-                  
-                  return {
-                    id: q.id,
-                    originalQuestion: validUserInputs[q.id] || '',
-                    answerA: q.answerA,
-                    answerB: q.answerB,
-                    selectedAnswer: selectedAnswer,
-                    selectedPrompt: selectedPrompt,
-                    modelJudge: modelJudgeAnswers[q.id] || null
-                  }
-                })
-              }
-            })
-            
-            console.log('Session completed and added to history:', this.historyOperations[this.historyOperations.length - 1])
-          }
-        }
-        this.currentSession = null
-        this.currentView = this.currentUser.role === 'admin' ? 'admin-test' : 'tester-tasks'
-        this.showToast('已保存并退出测试')
-      }
+    async quitSession(status = 'quit') {
+      if (!this.currentSession) return
+      const endpoint = status === 'finished' ? '/session/finish' : '/session/quit'
+      const data = await this.apiPost(endpoint, {
+        operator: this.operator(),
+        sessionId: this.currentSession.id
+      })
+      if (!data) return
+      await this.loadTasks()
+      this.currentSession = null
+      this.currentView = this.currentUser.role === 'admin' ? 'admin-test' : 'tester-tasks'
+      this.showToast('已保存并退出测试')
     },
     quitAdminSession() {
-      this.quitSession()
+      this.quitSession('quit')
     },
     finishSession() {
-      this.quitSession()
+      this.quitSession('finished')
     },
     createDemoTask() {
       this.tempTask = {
-        id: this.adminManagementTasks.length + 1,
+        id: 'temp',
         name: `新任务 ${this.adminManagementTasks.length + 1}`,
-        description: '这是一个新创建的模拟任务。',
+        description: '请补充任务目标、Prompt 与测试题目。',
         promptA: '',
         promptB: '',
         status: 'draft',
@@ -656,144 +482,108 @@ export default {
       }
       this.selectedTaskId = 'temp'
       this.currentView = 'admin-editor'
-      this.showToast('已创建模拟任务，请保存草稿或发布任务')
+      this.showToast('已创建任务，请保存草稿或发布任务')
     },
-    editTask(taskId) {
-      const task = this.adminManagementTasks.find(task => task.id === taskId)
+    async editTask(taskId) {
+      const task = await this.refreshTask(taskId)
+      if (!task) return
       if (task && task.status === 'published') {
-        // 为已发布任务创建临时副本
-        this.tempTask = JSON.parse(JSON.stringify(task))
+        this.tempTask = this.cloneDeep(task)
         this.tempTask.status = 'draft'
         this.selectedTaskId = 'temp'
       } else {
-        // 未发布任务直接编辑
         this.selectedTaskId = taskId
       }
       this.currentView = 'admin-editor'
     },
-    viewStats(taskId) {
+    async viewStats(taskId) {
+      await this.refreshTask(taskId)
       this.selectedTaskId = taskId
       this.currentView = 'admin-stats'
     },
-    addItem(itemForm) {
+    async addItem(itemForm) {
       if (!this.selectedTask) return
-      
-      const newItem = {
-        id: Date.now(),
-        code: itemForm.code,
-        sortOrder: itemForm.sortOrder,
-        sourceText: itemForm.sourceText
+      if (this.selectedTaskId === 'temp') {
+        this.tempTask.items.push({
+          id: Date.now(),
+          code: itemForm.code,
+          sourceType: 'text',
+          sortOrder: itemForm.sortOrder,
+          sourceText: itemForm.sourceText,
+          images: []
+        })
+      } else {
+        const data = await this.apiPost('/task/item/create', {
+          operator: this.operator(),
+          taskId: this.selectedTask.id,
+          item: {
+            code: itemForm.code,
+            sourceType: 'text',
+            sortOrder: itemForm.sortOrder,
+            sourceText: itemForm.sourceText,
+            images: []
+          }
+        })
+        if (!data) return
+        await this.refreshTask(this.selectedTask.id)
       }
-      
-      this.selectedTask.items.push(newItem)
       this.showToast('已添加题目')
     },
-    mockImport() {
+    async deleteItem(itemId) {
       if (!this.selectedTask) return
-      
-      // 模拟批量导入
-      const sampleItems = [
-        {
-          id: Date.now() + 1,
-          code: `Q${Date.now().toString().slice(-4)}`,
-          sortOrder: this.selectedTask.items.length + 1,
-          sourceText: '模拟导入题目 1：用户反馈产品问题'
-        },
-        {
-          id: Date.now() + 2,
-          code: `Q${(Date.now() + 1).toString().slice(-4)}`,
-          sortOrder: this.selectedTask.items.length + 2,
-          sourceText: '模拟导入题目 2：产品功能使用问题'
+      if (this.selectedTaskId === 'temp') {
+        const itemIndex = this.selectedTask.items.findIndex(item => item.id === itemId)
+        if (itemIndex >= 0) {
+          this.selectedTask.items.splice(itemIndex, 1)
+          this.showToast('题目已删除')
         }
-      ]
-      
-      this.selectedTask.items.push(...sampleItems)
-      this.showToast('模拟批量导入成功')
-    },
-    deleteItem(itemId) {
-      if (!this.selectedTask) return
-      
-      const itemIndex = this.selectedTask.items.findIndex(item => item.id === itemId)
-      if (itemIndex >= 0) {
-        this.selectedTask.items.splice(itemIndex, 1)
-        this.showToast('题目已删除')
-      }
-    },
-    deleteTask(taskId) {
-      if (taskId) {
-        // 根据用户角色删除相应任务列表中的任务
-        if (this.currentUser.role === 'admin') {
-          const index = this.adminTasks.findIndex(task => task.id === taskId)
-          if (index >= 0) {
-            this.adminTasks.splice(index, 1)
-            this.showToast('任务已删除')
-          }
-        } else {
-          const index = this.testerTasks.findIndex(task => task.id === taskId)
-          if (index >= 0) {
-            this.testerTasks.splice(index, 1)
-            this.showToast('任务已删除')
-          }
-        }
-      } else if (!this.selectedTask) {
         return
-      } else {
-        // 如果是临时任务（修改已发布任务），删除原始任务
-        if (this.selectedTaskId === 'temp' && this.tempTask) {
-          const originalTaskIndex = this.adminManagementTasks.findIndex(task => task.id === this.tempTask.id)
-          if (originalTaskIndex >= 0) {
-            this.adminManagementTasks.splice(originalTaskIndex, 1)
-          }
-          this.tempTask = null
-          this.selectedTaskId = null
-          this.currentView = 'admin-tasks'
-          this.showToast('任务已删除')
-        } else if (this.selectedTaskId === 'temp') {
-          // 新创建的临时任务，直接清除
-          this.tempTask = null
-          this.selectedTaskId = null
-          this.currentView = 'admin-tasks'
-          this.showToast('任务已删除')
-        } else {
-          // 删除现有任务
-          const index = this.adminManagementTasks.findIndex(task => task.id === this.selectedTaskId)
-          if (index >= 0) {
-            this.adminManagementTasks.splice(index, 1)
-            this.selectedTaskId = null
-            this.currentView = 'admin-tasks'
-            this.showToast('任务已删除')
-          }
-        }
       }
+      const data = await this.apiPost('/task/item/delete', {
+        operator: this.operator(),
+        taskId: this.selectedTask.id,
+        itemId
+      })
+      if (!data) return
+      await this.refreshTask(this.selectedTask.id)
+      this.showToast('题目已删除')
     },
-    saveDraft() {
-      if (!this.selectedTask) return
-      
-      // 如果是临时任务
-      if (this.selectedTaskId === 'temp' && this.tempTask) {
-        const originalTaskIndex = this.adminManagementTasks.findIndex(task => task.id === this.tempTask.id)
-        if (originalTaskIndex >= 0) {
-          // 修改已发布任务的临时副本，更新原始任务
-          this.tempTask.status = 'draft'
-          this.adminManagementTasks[originalTaskIndex] = this.tempTask
-          this.calculateTaskStats(this.tempTask)
-        } else {
-          // 新创建的临时任务，添加到任务列表
-          this.tempTask.status = 'draft'
-          this.adminManagementTasks.push(this.tempTask)
-          this.calculateTaskStats(this.tempTask)
-        }
-        this.tempTask = null
-      } else {
-        // 直接编辑的任务，更新状态
-        this.selectedTask.status = 'draft'
-        const taskIndex = this.adminManagementTasks.findIndex(task => task.id === this.selectedTaskId)
-        if (taskIndex >= 0) {
-          this.adminManagementTasks[taskIndex] = this.selectedTask
-          this.calculateTaskStats(this.selectedTask)
-        }
+    async deleteTask(taskId) {
+      if (taskId) {
+        const data = await this.apiPost('/task/delete', {
+          operator: this.operator(),
+          taskId
+        })
+        if (!data) return
+        await this.loadTasks()
+        this.showToast('任务已删除')
+        return
       }
-      
+      if (!this.selectedTask) {
+        return
+      }
+      if (this.selectedTaskId === 'temp') {
+        this.tempTask = null
+        this.selectedTaskId = null
+        this.currentView = 'admin-tasks'
+        this.showToast('任务已删除')
+        return
+      }
+      const data = await this.apiPost('/task/delete', {
+        operator: this.operator(),
+        taskId: this.selectedTaskId
+      })
+      if (!data) return
+      await this.loadTasks()
+      this.selectedTaskId = null
+      this.currentView = 'admin-tasks'
+      this.showToast('任务已删除')
+    },
+    async saveDraft() {
+      if (!this.selectedTask) return
+      const task = await this.persistTask('draft')
+      if (!task) return
+      this.tempTask = null
       this.showToast('任务已保存为草稿')
       this.selectedTaskId = null
       this.currentView = 'admin-tasks'
@@ -815,176 +605,68 @@ export default {
       this.selectedTaskId = 'temp'
       this.currentView = this.currentUser.role === 'admin' ? 'admin-import' : 'tester-import'
     },
-    importTask(newTask) {
-      // 根据用户角色添加到相应的任务列表
-      if (this.currentUser.role === 'admin') {
-        this.adminTasks.push(newTask)
-        this.calculateTaskStats(newTask)
-      } else {
-        this.testerTasks.push(newTask)
-        this.calculateTaskStats(newTask)
-      }
-      this.showToast('任务导入成功')
-    },
-    publishImportTask() {
+    async saveImportTask() {
       if (!this.selectedTask) return
-      
-      // 检查发布前校验
-      const taskEditor = this.$children.find(child => child.$options.name === 'TaskEditor')
-      if (taskEditor && taskEditor.publishCheckText !== '校验通过，可以发布。') {
-        alert(`发布失败：${taskEditor.publishCheckText}`)
+      if (!this.selectedTask.name || !this.selectedTask.description || !this.selectedTask.promptA || !this.selectedTask.promptB) {
+        alert('请填写任务名称、描述和两个Prompt')
         return
       }
-      
-      // 为导入任务生成新ID
-      const taskArray = this.currentUser.role === 'admin' ? this.adminTasks : this.testerTasks
-      const newId = Math.max(...taskArray.map(t => t.id), 0) + 1
-      
-      // 创建新任务对象
-      const newTask = {
-        ...this.selectedTask,
-        id: newId,
-        status: 'published'
-      }
-      
-      // 添加到相应的任务列表
-      taskArray.push(newTask)
-      this.calculateTaskStats(newTask)
-      
-      // 清理临时任务
+      const task = await this.persistTask('draft')
+      if (!task) return
       this.tempTask = null
       this.selectedTaskId = null
-      
-      // 显示成功消息并返回任务列表
-      this.showToast('任务导入成功并已发布')
-      this.currentView = this.currentUser.role === 'admin' ? 'admin-test' : 'tester-tasks'
-    },
-    saveImportTask() {
-      if (!this.selectedTask) return
-      
-      // 验证必填字段
-      if (!this.selectedTask.name || !this.selectedTask.description || !this.selectedTask.promptA || !this.selectedTask.promptB) {
-        alert('请填写任务名称、描述和两个Prompt');
-        return;
-      }
-      
-      // 为导入任务生成新ID
-      const taskArray = this.currentUser.role === 'admin' ? this.adminTasks : this.testerTasks
-      const newId = Math.max(...taskArray.map(t => t.id), 0) + 1
-      
-      // 创建新任务对象
-      const newTask = {
-        ...this.selectedTask,
-        id: newId,
-        status: 'unpublished'
-      }
-      
-      // 添加到相应的任务列表
-      taskArray.push(newTask)
-      this.calculateTaskStats(newTask)
-      
-      // 清理临时任务
-      this.tempTask = null
-      this.selectedTaskId = null
-      
-      // 显示成功消息并返回任务列表
       this.showToast('任务导入成功')
       this.currentView = this.currentUser.role === 'admin' ? 'admin-test' : 'tester-tasks'
     },
     backToTaskManagement() {
-      // 清理任务选择
       this.selectedTaskId = null
-      // 回到广场任务管理页面
       this.currentView = 'admin-tasks'
     },
     backFromImport() {
-      // 清理临时任务
       this.tempTask = null
       this.selectedTaskId = null
-      // 回到任务列表页面
       this.currentView = this.currentUser.role === 'admin' ? 'admin-test' : 'tester-tasks'
     },
-    publishTask() {
+    async publishTask() {
       if (!this.selectedTask) return
-      
-      // 检查发布前校验
       const taskEditor = this.$children.find(child => child.$options.name === 'TaskEditor')
       if (taskEditor && taskEditor.publishCheckText !== '校验通过，可以发布。') {
         alert(`发布失败：${taskEditor.publishCheckText}`)
         return
       }
-      
-      // 如果是临时任务
-      if (this.selectedTaskId === 'temp' && this.tempTask) {
-        const originalTaskIndex = this.adminManagementTasks.findIndex(task => task.id === this.tempTask.id)
-        if (originalTaskIndex >= 0) {
-          // 修改已发布任务的临时副本，更新原始任务
-          this.tempTask.status = 'published'
-          this.adminManagementTasks[originalTaskIndex] = this.tempTask
-          this.calculateTaskStats(this.tempTask)
-        } else {
-          // 新创建的临时任务，添加到任务列表
-          this.tempTask.status = 'published'
-          this.adminManagementTasks.push(this.tempTask)
-          this.calculateTaskStats(this.tempTask)
-        }
-        this.tempTask = null
-      } else {
-        // 直接编辑的任务，更新状态
-        this.selectedTask.status = 'published'
-        const taskIndex = this.adminManagementTasks.findIndex(task => task.id === this.selectedTaskId)
-        if (taskIndex >= 0) {
-          this.adminManagementTasks[taskIndex] = this.selectedTask
-          this.calculateTaskStats(this.selectedTask)
-        }
-      }
-      
+      const savedTask = await this.persistTask('draft')
+      if (!savedTask) return
+      const published = await this.apiPost('/task/publish', {
+        operator: this.operator(),
+        taskId: savedTask.id
+      })
+      if (!published) return
+      await this.loadTasks()
+      this.tempTask = null
       this.showToast('任务已重新发布')
       this.selectedTaskId = null
       this.currentView = 'admin-tasks'
     },
-    calculateTaskStats(task) {
-      // 计算总选择数
-      let totalSelections = 0
-      let promptASelections = 0
-      let promptBSelections = 0
-      
-      task.sessions.forEach(session => {
-        session.answers.forEach(answer => {
-          totalSelections++
-          if (answer.selectedPrompt === 'prompt_a') {
-            promptASelections++
-          } else {
-            promptBSelections++
-          }
+    async persistTask(status) {
+      const payloadTask = this.cloneDeep(this.selectedTaskId === 'temp' ? this.tempTask : this.selectedTask)
+      payloadTask.status = status
+      if (this.selectedTaskId === 'temp') {
+        const created = await this.apiPost('/task/create', {
+          operator: this.operator(),
+          task: payloadTask
         })
+        if (!created) return null
+        await this.loadTasks()
+        return created.task
+      }
+      const updated = await this.apiPost('/task/update', {
+        operator: this.operator(),
+        taskId: payloadTask.id,
+        task: payloadTask
       })
-      
-      task.totalSelections = totalSelections
-      task.promptASelections = promptASelections
-      task.promptBSelections = promptBSelections
-      task.promptAPercentage = totalSelections > 0 ? Math.round((promptASelections / totalSelections) * 100) : 0
-      task.promptBPercentage = totalSelections > 0 ? Math.round((promptBSelections / totalSelections) * 100) : 0
-      
-      // 计算每题的选择数
-      task.items.forEach(item => {
-        let itemPromptASelections = 0
-        let itemPromptBSelections = 0
-        
-        task.sessions.forEach(session => {
-          const answer = session.answers.find(a => a.itemId === item.id)
-          if (answer) {
-            if (answer.selectedPrompt === 'prompt_a') {
-              itemPromptASelections++
-            } else {
-              itemPromptBSelections++
-            }
-          }
-        })
-        
-        item.promptASelections = itemPromptASelections
-        item.promptBSelections = itemPromptBSelections
-      })
+      if (!updated) return null
+      await this.loadTasks()
+      return updated.task
     },
     showToast(message) {
       this.toast.message = message

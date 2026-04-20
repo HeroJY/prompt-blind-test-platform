@@ -7,7 +7,7 @@
       </div>
       <div style="display: flex; align-items: center; gap: 10px;">
         <button class="btn primary" @click="$emit('create-import-task')">导入任务</button>
-        <div class="status-pill"><span class="status-dot"></span> 模拟在线 · 无后端接口</div>
+        <div class="status-pill"><span class="status-dot"></span> 接口已连接 · 实时保存</div>
       </div>
     </div>
     <div class="task-list" id="testerTaskList">
@@ -141,7 +141,7 @@ export default {
         completedSessions,
         totalAnswers,
         participatedTasks: participatedTasks.size,
-        averageAccuracy: 85 // 模拟数据
+        averageAccuracy: 0
       }
     },
     taskTestCounts() {
