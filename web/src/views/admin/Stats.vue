@@ -9,23 +9,27 @@
 
     <div v-if="!selectedTask" id="statsEmpty" class="empty">请先在任务管理页选择一个任务后查看统计。</div>
 
+    <div v-else-if="loading" class="empty">正在加载统计数据...</div>
+
+    <div v-else-if="errorMessage" class="empty">{{ errorMessage }}</div>
+
     <div v-else id="statsContent" class="panel-grid">
       <div class="grid-4" id="statsKpis">
         <div class="card pad kpi-card">
           <div class="kpi-label">参与用户</div>
-          <div class="kpi-value">{{ selectedTask.sessions.length }}</div>
+          <div class="kpi-value">{{ overview.participantCount }}</div>
         </div>
         <div class="card pad kpi-card">
           <div class="kpi-label">总作答数</div>
-          <div class="kpi-value">{{ selectedTask.totalSelections }}</div>
+          <div class="kpi-value">{{ overview.totalSelections }}</div>
         </div>
         <div class="card pad kpi-card">
           <div class="kpi-label">Prompt A 选择</div>
-          <div class="kpi-value">{{ selectedTask.promptASelections }}</div>
+          <div class="kpi-value">{{ overview.promptASelections }}</div>
         </div>
         <div class="card pad kpi-card">
           <div class="kpi-label">Prompt B 选择</div>
-          <div class="kpi-value">{{ selectedTask.promptBSelections }}</div>
+          <div class="kpi-value">{{ overview.promptBSelections }}</div>
         </div>
       </div>
       <div class="stat-banner">
@@ -40,19 +44,19 @@
             <div class="bar-row">
               <div class="bar-head">
                 <div>Prompt A</div>
-                <div>{{ selectedTask.promptAPercentage }}%</div>
+                <div>{{ overview.promptAPercentage }}%</div>
               </div>
               <div class="bar-bg">
-                <div class="bar-fill" :style="{ width: selectedTask.promptAPercentage + '%' }"></div>
+                <div class="bar-fill" :style="{ width: overview.promptAPercentage + '%' }"></div>
               </div>
             </div>
             <div class="bar-row">
               <div class="bar-head">
                 <div>Prompt B</div>
-                <div>{{ selectedTask.promptBPercentage }}%</div>
+                <div>{{ overview.promptBPercentage }}%</div>
               </div>
               <div class="bar-bg">
-                <div class="bar-fill" :style="{ width: selectedTask.promptBPercentage + '%' }"></div>
+                <div class="bar-fill" :style="{ width: overview.promptBPercentage + '%' }"></div>
               </div>
             </div>
           </div>
@@ -72,7 +76,7 @@
               </tr>
             </thead>
             <tbody id="statsItemBody">
-              <tr v-for="item in selectedTask.items" :key="item.id">
+              <tr v-for="item in statsItems" :key="item.id">
                 <td>{{ item.code }}</td>
                 <td>{{ item.sourceText }}</td>
                 <td>{{ item.promptASelections || 0 }}</td>
@@ -88,6 +92,8 @@
 </template>
 
 <script>
+import { postJSON } from '../../api'
+
 export default {
   name: 'Stats',
   props: {
@@ -96,22 +102,81 @@ export default {
       default: null
     }
   },
+  data() {
+    return {
+      loading: false,
+      errorMessage: '',
+      overview: {
+        participantCount: 0,
+        totalSelections: 0,
+        promptASelections: 0,
+        promptBSelections: 0,
+        promptAPercentage: 0,
+        promptBPercentage: 0
+      },
+      statsItems: []
+    }
+  },
   computed: {
     winnerText() {
       if (!this.selectedTask) return ''
-      const a = this.selectedTask.promptASelections || 0
-      const b = this.selectedTask.promptBSelections || 0
+      const a = this.overview.promptASelections || 0
+      const b = this.overview.promptBSelections || 0
       if (a > b) return 'Prompt A 当前更优'
       if (b > a) return 'Prompt B 当前更优'
       return 'Prompt A 与 B 平局'
     },
     winnerDesc() {
       if (!this.selectedTask) return ''
-      const a = this.selectedTask.promptASelections || 0
-      const b = this.selectedTask.promptBSelections || 0
+      const a = this.overview.promptASelections || 0
+      const b = this.overview.promptBSelections || 0
       const total = a + b
       if (total === 0) return '暂无数据'
       return `Prompt A: ${Math.round((a / total) * 100)}% vs Prompt B: ${Math.round((b / total) * 100)}%`
+    }
+  },
+  watch: {
+    selectedTask: {
+      immediate: true,
+      handler(newTask) {
+        if (newTask && newTask.id) {
+          this.fetchStats(newTask.id)
+        } else {
+          this.overview = {
+            participantCount: 0,
+            totalSelections: 0,
+            promptASelections: 0,
+            promptBSelections: 0,
+            promptAPercentage: 0,
+            promptBPercentage: 0
+          }
+          this.statsItems = []
+          this.errorMessage = ''
+        }
+      }
+    }
+  },
+  methods: {
+    async fetchStats(taskId) {
+      this.loading = true
+      this.errorMessage = ''
+      try {
+        const overview = await postJSON('/stats/task_overview', { taskId })
+        const items = await postJSON('/stats/task_items', { taskId })
+        this.overview = {
+          participantCount: overview.participantCount || 0,
+          totalSelections: overview.totalSelections || 0,
+          promptASelections: overview.promptASelections || 0,
+          promptBSelections: overview.promptBSelections || 0,
+          promptAPercentage: overview.promptAPercentage || 0,
+          promptBPercentage: overview.promptBPercentage || 0
+        }
+        this.statsItems = items.items || []
+      } catch (error) {
+        this.errorMessage = error.message || '统计数据加载失败'
+      } finally {
+        this.loading = false
+      }
     }
   }
 }

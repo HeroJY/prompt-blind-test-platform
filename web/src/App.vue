@@ -243,6 +243,8 @@ export default {
       const result = this.cloneDeep(task || {})
       result.items = result.items || []
       result.sessions = result.sessions || []
+      result.promptAImages = result.promptAImages || []
+      result.promptBImages = result.promptBImages || []
       result.questionLimit = result.questionLimit || 49
       result.promptASelections = result.promptASelections || 0
       result.promptBSelections = result.promptBSelections || 0
@@ -473,6 +475,8 @@ export default {
         description: '请补充任务目标、Prompt 与测试题目。',
         promptA: '',
         promptB: '',
+        promptAImages: [],
+        promptBImages: [],
         status: 'draft',
         testCount: 5,
         questionLimit: 49,
@@ -596,6 +600,8 @@ export default {
         description: '',
         promptA: '',
         promptB: '',
+        promptAImages: [],
+        promptBImages: [],
         status: 'draft',
         questionLimit: 49,
         createdBy: this.currentUser.username,
@@ -607,8 +613,10 @@ export default {
     },
     async saveImportTask() {
       if (!this.selectedTask) return
-      if (!this.selectedTask.name || !this.selectedTask.description || !this.selectedTask.promptA || !this.selectedTask.promptB) {
-        alert('请填写任务名称、描述和两个Prompt')
+      const hasPromptA = !!(this.selectedTask.promptA || (this.selectedTask.promptAImages || []).length)
+      const hasPromptB = !!(this.selectedTask.promptB || (this.selectedTask.promptBImages || []).length)
+      if (!this.selectedTask.name || !this.selectedTask.description || !hasPromptA || !hasPromptB) {
+        alert('请填写任务名称、描述，并为 Prompt A / B 至少提供文本或图片')
         return
       }
       const task = await this.persistTask('draft')

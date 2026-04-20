@@ -67,26 +67,44 @@
       <!-- 提示词导入模块 -->
       <div class="card pad" style="margin-top: 18px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
-          <div style="font-weight: 600;">提示词导入</div>
-          <div class="btn-row">
-            <button class="btn secondary" @click="triggerFileUpload">上传提示词</button>
-            <input type="file" ref="fileInput" accept=".xlsx" style="display: none" @change="handleFileUpload" />
-          </div>
+          <div style="font-weight: 600;">提示词配置</div>
         </div>
         <div class="field-grid">
           <div class="grid-2">
             <div>
               <label>Prompt A</label>
-              <textarea v-model="editorForm.promptA" id="editorPromptA"></textarea>
+              <textarea v-model="editorForm.promptA" id="editorPromptA" placeholder="可直接输入 Prompt A 文本"></textarea>
+              <div class="btn-row" style="margin-top: 12px;">
+                <button class="btn secondary" @click="triggerPromptImageUpload('A')">上传图片</button>
+                <input type="file" ref="promptAImageInput" accept="image/*" multiple style="display: none" @change="handlePromptImageUpload('A', $event)" />
+              </div>
+              <div v-if="editorForm.promptAImages.length" class="prompt-image-grid">
+                <div v-for="(image, index) in editorForm.promptAImages" :key="`promptA-${index}`" class="prompt-image-card">
+                  <img :src="image.dataUrl" :alt="image.name || `Prompt A ${index + 1}`" class="prompt-image-preview" />
+                  <div class="prompt-image-name">{{ image.name || `图片 ${index + 1}` }}</div>
+                  <button class="btn danger small" @click="removePromptImage('A', index)">删除</button>
+                </div>
+              </div>
             </div>
             <div>
               <label>Prompt B</label>
-              <textarea v-model="editorForm.promptB" id="editorPromptB"></textarea>
+              <textarea v-model="editorForm.promptB" id="editorPromptB" placeholder="可直接输入 Prompt B 文本"></textarea>
+              <div class="btn-row" style="margin-top: 12px;">
+                <button class="btn secondary" @click="triggerPromptImageUpload('B')">上传图片</button>
+                <input type="file" ref="promptBImageInput" accept="image/*" multiple style="display: none" @change="handlePromptImageUpload('B', $event)" />
+              </div>
+              <div v-if="editorForm.promptBImages.length" class="prompt-image-grid">
+                <div v-for="(image, index) in editorForm.promptBImages" :key="`promptB-${index}`" class="prompt-image-card">
+                  <img :src="image.dataUrl" :alt="image.name || `Prompt B ${index + 1}`" class="prompt-image-preview" />
+                  <div class="prompt-image-name">{{ image.name || `图片 ${index + 1}` }}</div>
+                  <button class="btn danger small" @click="removePromptImage('B', index)">删除</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
         <div style="margin-top: 12px; color: #000; font-size: 14px; line-height: 1.8; background-color: #fff3cd; padding: 8px 12px; border-radius: 4px; border-left: 3px solid #ffc107; font-weight: 500;">
-          提示：在开始盲选测试之后，两份提示词会随机出现，不一定Prompt A对应的答案出现在左侧
+          提示：Prompt 可以直接输入文字，也可以上传图片做存档展示。当前题目批量导入仍只支持 `.xlsx`。
         </div>
       </div>
 
@@ -211,7 +229,9 @@ export default {
         name: '',
         description: '',
         promptA: '',
-        promptB: ''
+        promptB: '',
+        promptAImages: [],
+        promptBImages: []
       },
       newItemForm: {
         code: '',
@@ -229,7 +249,9 @@ export default {
             name: newTask.name,
             description: newTask.description,
             promptA: newTask.promptA,
-            promptB: newTask.promptB
+            promptB: newTask.promptB,
+            promptAImages: newTask.promptAImages || [],
+            promptBImages: newTask.promptBImages || []
           }
           this.testData = newTask.testData || ''
           if (!newTask.items) {
@@ -246,6 +268,8 @@ export default {
           this.selectedTask.description = newForm.description
           this.selectedTask.promptA = newForm.promptA
           this.selectedTask.promptB = newForm.promptB
+          this.selectedTask.promptAImages = newForm.promptAImages || []
+          this.selectedTask.promptBImages = newForm.promptBImages || []
         }
       },
       deep: true
@@ -262,8 +286,8 @@ export default {
     publishCheckText() {
       if (!this.selectedTask) return '当前未选择任务。'
       if (!this.selectedTask.name) return '请填写任务名称。'
-      if (!this.selectedTask.promptA) return '请填写 Prompt A。'
-      if (!this.selectedTask.promptB) return '请填写 Prompt B。'
+      if (!this.selectedTask.promptA && !(this.selectedTask.promptAImages || []).length) return '请为 Prompt A 提供文本或图片。'
+      if (!this.selectedTask.promptB && !(this.selectedTask.promptBImages || []).length) return '请为 Prompt B 提供文本或图片。'
       return '校验通过，可以发布。'
     },
     isError() {
@@ -297,24 +321,38 @@ export default {
         sourceText: ''
       };
     },
-    triggerFileUpload() {
-      this.$refs.fileInput.click()
+    triggerPromptImageUpload(slot) {
+      const refName = slot === 'A' ? 'promptAImageInput' : 'promptBImageInput'
+      this.$refs[refName].click()
     },
-    async handleFileUpload(event) {
-      const file = event.target.files && event.target.files[0]
-      if (!file) return
-      try {
-        const data = await postFile('/upload/prompt_excel', file)
-        this.editorForm.name = data.task_name || this.editorForm.name
-        this.editorForm.description = data.task_description || this.editorForm.description
-        this.editorForm.promptA = data.prompt_a_text || ''
-        this.editorForm.promptB = data.prompt_b_text || ''
-        alert('提示词文件已上传并解析完成')
-      } catch (error) {
-        alert(error.message || '提示词上传失败')
-      } finally {
-        this.$refs.fileInput.value = ''
-      }
+    handlePromptImageUpload(slot, event) {
+      const files = event.target.files ? Array.from(event.target.files) : []
+      if (!files.length) return
+      const targetKey = slot === 'A' ? 'promptAImages' : 'promptBImages'
+      const readTasks = files.map(file => new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          resolve({
+            name: file.name,
+            type: file.type,
+            dataUrl: reader.result
+          })
+        }
+        reader.onerror = () => reject(new Error('图片读取失败'))
+        reader.readAsDataURL(file)
+      }))
+
+      Promise.all(readTasks).then(images => {
+        this.editorForm[targetKey] = (this.editorForm[targetKey] || []).concat(images)
+      }).catch(error => {
+        alert(error.message || '图片上传失败')
+      }).finally(() => {
+        event.target.value = ''
+      })
+    },
+    removePromptImage(slot, index) {
+      const targetKey = slot === 'A' ? 'promptAImages' : 'promptBImages'
+      this.editorForm[targetKey].splice(index, 1)
     },
     triggerDataUpload() {
       this.$refs.dataInput.click()
@@ -369,6 +407,38 @@ export default {
   grid-template-columns: 1fr 1fr;
   gap: 18px;
   margin-bottom: 18px;
+}
+
+.prompt-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.prompt-image-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prompt-image-preview {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.prompt-image-name {
+  font-size: 12px;
+  color: var(--muted);
+  word-break: break-all;
 }
 
 /* 响应式调整 */

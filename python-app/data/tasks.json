@@ -1,0 +1,91 @@
+[
+  {
+    "id": 1,
+    "name": "客服回复质量对比（V3 vs V4）",
+    "description": "比较两组提示词在客服安抚回复中的可读性、同理心表达、规则解释与补偿建议完整度。",
+    "promptA": "你是一名资深客服专家，请输出安抚式回复，先表达理解，再说明平台规则，最后给出可执行的补偿建议，整体语气温和、稳定、清晰。",
+    "promptB": "请作为高情商客服生成回复：先共情，再说明价格变动或流程机制，最后给出一到两种明确处理路径，并强调继续协助。",
+    "testData": "order_id=123456\nproduct_name=手机壳\ncomplaint_reason=昨天下单今天降价",
+    "status": "published",
+    "visibility": "public",
+    "questionLimit": 49,
+    "createdBy": "admin01",
+    "createdAt": "2026-04-19T10:00:00+08:00",
+    "updatedAt": "2026-04-19T10:00:00+08:00",
+    "items": [
+      {
+        "id": 101,
+        "code": "Q001",
+        "sourceType": "text",
+        "sortOrder": 1,
+        "sourceText": "用户投诉：我昨天购买的商品今天就降价了，而且客服回复非常慢。请生成一段安抚用户情绪、解释规则并给出合理补偿建议的话术。",
+        "images": []
+      },
+      {
+        "id": 102,
+        "code": "Q002",
+        "sourceType": "text",
+        "sortOrder": 2,
+        "sourceText": "用户反馈：快递已经延迟两天还没到，客服之前答应今天送达但目前没有更新。请生成一段安抚和补偿建议回复。",
+        "images": []
+      },
+      {
+        "id": 103,
+        "code": "Q003",
+        "sourceType": "text",
+        "sortOrder": 3,
+        "sourceText": "用户收到商品后发现配件缺失，希望客服回复。",
+        "images": []
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "AI质检结果比对",
+    "description": "比较两组提示词在质检结果方面的差异。",
+    "promptA": "请对输入的客户信息进行综合风险分析，再按用户提问生成结构化回答。",
+    "promptB": "请把输入的客户信息整合成要点，用更口语化的表达回答用户，并尽可能减少遗漏。",
+    "testData": "customer_name=张三\nloan_amount=200000\nindustry=跨境电商",
+    "status": "draft",
+    "visibility": "private",
+    "questionLimit": 49,
+    "createdBy": "admin01",
+    "createdAt": "2026-04-19T11:00:00+08:00",
+    "updatedAt": "2026-04-19T11:00:00+08:00",
+    "items": [
+      {
+        "id": 201,
+        "code": "Q201",
+        "sourceType": "text",
+        "sortOrder": 1,
+        "sourceText": "分析仪表盘数据，主要波动集中在转化率与客单价，需要先确认渠道结构变化。",
+        "images": []
+      },
+      {
+        "id": 202,
+        "code": "Q202",
+        "sourceType": "text",
+        "sortOrder": 2,
+        "sourceText": "分析设计图，总结整体风格问题，并分别点评排版、配色和重点信息层级。",
+        "images": []
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "新导入任务",
+    "description": "123123",
+    "promptA": "123123",
+    "promptB": "555555555",
+    "promptAImages": [],
+    "promptBImages": [],
+    "testData": "test",
+    "status": "draft",
+    "visibility": "private",
+    "questionLimit": 49,
+    "createdBy": "tester01",
+    "createdAt": "2026-04-20T10:07:58.158083",
+    "updatedAt": "2026-04-20T10:07:58.158099",
+    "items": []
+  }
+]

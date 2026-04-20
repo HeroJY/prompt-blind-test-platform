@@ -78,11 +78,17 @@
             <h3 style="grid-column: 1 / -1; margin-bottom: 16px;">Prompt 内容</h3>
             <div class="prompt-card prompt-card-a">
               <h4 style="margin-top: 0; margin-bottom: 12px; color: #2563eb;">Prompt A</h4>
-              <pre style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; padding: 16px; background-color: #f0f9ff; border-radius: 8px; font-family: monospace; margin: 0;">{{ currentTaskStats?.promptA }}</pre>
+              <pre style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; padding: 16px; background-color: #f0f9ff; border-radius: 8px; font-family: monospace; margin: 0;">{{ currentTaskStats?.promptA || ((currentTaskStats?.promptAImages && currentTaskStats.promptAImages.length) ? '当前 Prompt 未填写文字，已上传图片内容。' : '') }}</pre>
+              <div v-if="currentTaskStats?.promptAImages && currentTaskStats.promptAImages.length" class="prompt-image-grid">
+                <img v-for="(image, index) in currentTaskStats.promptAImages" :key="`stats-a-${index}`" :src="image.dataUrl" :alt="image.name || `Prompt A ${index + 1}`" class="prompt-image-preview" />
+              </div>
             </div>
             <div class="prompt-card prompt-card-b">
               <h4 style="margin-top: 0; margin-bottom: 12px; color: #db2777;">Prompt B</h4>
-              <pre style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; padding: 16px; background-color: #fef2f2; border-radius: 8px; font-family: monospace; margin: 0;">{{ currentTaskStats?.promptB }}</pre>
+              <pre style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; padding: 16px; background-color: #fef2f2; border-radius: 8px; font-family: monospace; margin: 0;">{{ currentTaskStats?.promptB || ((currentTaskStats?.promptBImages && currentTaskStats.promptBImages.length) ? '当前 Prompt 未填写文字，已上传图片内容。' : '') }}</pre>
+              <div v-if="currentTaskStats?.promptBImages && currentTaskStats.promptBImages.length" class="prompt-image-grid">
+                <img v-for="(image, index) in currentTaskStats.promptBImages" :key="`stats-b-${index}`" :src="image.dataUrl" :alt="image.name || `Prompt B ${index + 1}`" class="prompt-image-preview" />
+              </div>
             </div>
           </div>
         </div>
@@ -97,6 +103,8 @@
 </template>
 
 <script>
+import { postJSON } from '../../api'
+
 export default {
   name: 'TaskList',
   props: {
@@ -116,7 +124,8 @@ export default {
   data() {
     return {
       showStatsModal: false,
-      currentTaskStats: null
+      currentTaskStats: null,
+      statsLoading: false
     }
   },
   computed: {
@@ -154,62 +163,99 @@ export default {
 
   },
   methods: {
-    showTaskStats(task) {
-      // 计算任务的统计数据
-      let promptASelections = 0
-      let promptBSelections = 0
-      
-      // 从历史操作中统计选择结果，只统计当前用户的操作
-      this.historyOperations.forEach(op => {
-        if (op.taskId === task.id && op.type === 'session_completed' && op.userId === this.currentUser.username) {
-          op.details.questions.forEach(q => {
-            if (q.selectedPrompt === 'prompt_a') {
-              promptASelections++
-            } else if (q.selectedPrompt === 'prompt_b') {
-              promptBSelections++
-            }
-          })
-        }
-      })
-      
-      // 计算总选择次数和百分比
-      const totalSelections = promptASelections + promptBSelections
-      const promptAPercentage = totalSelections > 0 ? Math.round((promptASelections / totalSelections) * 100) : 0
-      const promptBPercentage = totalSelections > 0 ? Math.round((promptBSelections / totalSelections) * 100) : 0
-      
-      // 确定当前更优的 Prompt
-      let conclusion = '暂无足够数据'
-      let conclusionText = ''
-      
-      if (totalSelections > 0) {
-        if (promptASelections > promptBSelections) {
-          conclusion = 'Prompt A 当前更优'
-          conclusionText = `当前 Prompt A 被选择 ${promptASelections} 次，高于 Prompt B 的 ${promptBSelections} 次，可作为下一轮优化的基线版本。`
-        } else if (promptBSelections > promptASelections) {
-          conclusion = 'Prompt B 当前更优'
-          conclusionText = `当前 Prompt B 被选择 ${promptBSelections} 次，高于 Prompt A 的 ${promptASelections} 次，可作为下一轮优化的基线版本。`
-        } else {
-          conclusion = 'Prompt A 和 B 不分伯仲'
-          conclusionText = `当前 Prompt A 和 B 各被选择 ${promptASelections} 次，建议增加测试次数以获得更明确的结果。`
-        }
-      }
-      
-      // 保存统计数据
+    async showTaskStats(task) {
+      this.statsLoading = true
+      this.showStatsModal = true
       this.currentTaskStats = {
         taskName: task.name,
         promptA: task.promptA,
         promptB: task.promptB,
-        promptASelections,
-        promptBSelections,
-        totalSelections,
-        promptAPercentage,
-        promptBPercentage,
-        conclusion,
-        conclusionText
+        promptAImages: task.promptAImages || [],
+        promptBImages: task.promptBImages || [],
+        promptASelections: 0,
+        promptBSelections: 0,
+        totalSelections: 0,
+        promptAPercentage: 0,
+        promptBPercentage: 0,
+        conclusion: '统计加载中',
+        conclusionText: '正在从后端获取最新统计数据，请稍候。'
       }
-      
-      // 显示弹窗
-      this.showStatsModal = true
+
+      try {
+        const overview = await postJSON('/stats/task_overview', {
+          operator: {
+            username: this.currentUser.username,
+            role: this.currentUser.role
+          },
+          taskId: task.id
+        })
+
+        const itemsData = await postJSON('/stats/task_items', {
+          operator: {
+            username: this.currentUser.username,
+            role: this.currentUser.role
+          },
+          taskId: task.id
+        })
+
+        const promptASelections = overview.promptASelections || 0
+        const promptBSelections = overview.promptBSelections || 0
+        const totalSelections = overview.totalSelections || 0
+        const promptAPercentage = overview.promptAPercentage || 0
+        const promptBPercentage = overview.promptBPercentage || 0
+
+        // 确定当前更优的 Prompt
+        let conclusion = '暂无足够数据'
+        let conclusionText = ''
+
+        if (totalSelections > 0) {
+          if (promptASelections > promptBSelections) {
+            conclusion = 'Prompt A 当前更优'
+            conclusionText = `当前 Prompt A 被选择 ${promptASelections} 次，高于 Prompt B 的 ${promptBSelections} 次，可作为下一轮优化的基线版本。`
+          } else if (promptBSelections > promptASelections) {
+            conclusion = 'Prompt B 当前更优'
+            conclusionText = `当前 Prompt B 被选择 ${promptBSelections} 次，高于 Prompt A 的 ${promptASelections} 次，可作为下一轮优化的基线版本。`
+          } else {
+            conclusion = 'Prompt A 和 B 不分伯仲'
+            conclusionText = `当前 Prompt A 和 B 各被选择 ${promptASelections} 次，建议增加测试次数以获得更明确的结果。`
+          }
+        }
+
+        this.currentTaskStats = {
+          taskName: task.name,
+          promptA: task.promptA,
+          promptB: task.promptB,
+          promptAImages: task.promptAImages || [],
+          promptBImages: task.promptBImages || [],
+          promptASelections,
+          promptBSelections,
+          totalSelections,
+          promptAPercentage,
+          promptBPercentage,
+          participantCount: overview.participantCount || 0,
+          sessionCount: overview.sessionCount || 0,
+          items: itemsData.items || [],
+          conclusion,
+          conclusionText
+        }
+      } catch (error) {
+        this.currentTaskStats = {
+          taskName: task.name,
+          promptA: task.promptA,
+          promptB: task.promptB,
+          promptAImages: task.promptAImages || [],
+          promptBImages: task.promptBImages || [],
+          promptASelections: 0,
+          promptBSelections: 0,
+          totalSelections: 0,
+          promptAPercentage: 0,
+          promptBPercentage: 0,
+          conclusion: '统计加载失败',
+          conclusionText: error.message || '未能获取后端统计结果。'
+        }
+      } finally {
+        this.statsLoading = false
+      }
     },
     closeStatsModal() {
       this.showStatsModal = false
@@ -257,6 +303,22 @@ export default {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
+}
+
+.prompt-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.prompt-image-preview {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
 }
 
 .close-btn {

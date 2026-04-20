@@ -84,6 +84,9 @@
         </div>
         <div class="modal-body" style="margin-bottom: 24px;">
           <pre style="white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; padding: 16px; background-color: #f8fafc; border-radius: 8px; font-family: monospace;">{{ currentPromptContent }}</pre>
+          <div v-if="currentPromptImages.length" class="prompt-image-grid">
+            <img v-for="(image, index) in currentPromptImages" :key="`history-prompt-${index}`" :src="image.dataUrl" :alt="image.name || `Prompt ${currentPromptType} ${index + 1}`" class="prompt-image-preview" />
+          </div>
         </div>
         <div class="modal-footer" style="display: flex; justify-content: flex-end;">
           <button class="btn primary" style="padding: 8px 16px;" @click="showPromptModal = false">关闭</button>
@@ -106,7 +109,8 @@ export default {
     return {
       showPromptModal: false,
       currentPromptType: '',
-      currentPromptContent: ''
+      currentPromptContent: '',
+      currentPromptImages: []
     }
   },
   computed: {
@@ -155,14 +159,25 @@ export default {
     },
     showPromptDetail(promptType, question) {
       this.currentPromptType = promptType
+      this.currentPromptImages = []
       // 从selectedTask中获取对应的prompt内容
       if (this.selectedTask) {
+        const promptImages = promptType === 'A'
+          ? (this.selectedTask.promptAImages || [])
+          : (this.selectedTask.promptBImages || [])
         if (promptType === 'A' && this.selectedTask.promptA) {
           this.currentPromptContent = this.selectedTask.promptA
         } else if (promptType === 'B' && this.selectedTask.promptB) {
           this.currentPromptContent = this.selectedTask.promptB
+        } else if (promptImages.length) {
+          this.currentPromptContent = '当前 Prompt 未填写文字，已上传图片内容。'
         } else {
           this.currentPromptContent = '未找到对应的Prompt内容'
+        }
+        if (promptType === 'A') {
+          this.currentPromptImages = this.selectedTask.promptAImages || []
+        } else if (promptType === 'B') {
+          this.currentPromptImages = this.selectedTask.promptBImages || []
         }
       } else {
         this.currentPromptContent = '未找到对应的Prompt内容'
@@ -184,5 +199,20 @@ export default {
   color: #059669 !important;
   font-weight: 800 !important;
 }
-</style>
 
+.prompt-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.prompt-image-preview {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+</style>
